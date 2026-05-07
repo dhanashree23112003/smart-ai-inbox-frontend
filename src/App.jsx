@@ -1,86 +1,84 @@
 import { useState, useEffect } from "react";
 
-const API = "https://dhanashree2311-smart-ai-inbox.hf.space";
+const API = import.meta.env.VITE_API_URL || "https://dhanashree2311-smart-ai-inbox.hf.space";
 
 const MOCK_EMAILS = [
   { id: 1, subject: "Q4 Budget Review - Action Required", sender: "Sarah Chen", priority: "HIGH", summary: "Please review and approve the Q4 allocation before end of week. Finance needs sign-off on the revised projections.", importance_score: 92, deadline: new Date(Date.now() + 3 * 36e5).toISOString(), reason: "Urgency signal detected. Action required. Deadline present." },
   { id: 2, subject: "Partnership Proposal — Nexus Labs", sender: "Marcus Webb", priority: "HIGH", summary: "Following our call last Tuesday, I've attached the revised terms. Looking forward to moving this forward.", importance_score: 85, deadline: new Date(Date.now() + 26 * 36e5).toISOString(), reason: "High urgency. Financial content. Action required." },
   { id: 3, subject: "Design System v2.0 Handoff", sender: "Priya Nair", priority: "MEDIUM", summary: "The Figma files are ready. Component library is fully documented. Handoff tokens are exported.", importance_score: 58, deadline: new Date(Date.now() + 50 * 36e5).toISOString(), reason: "Moderate relevance. Deadline present." },
   { id: 4, subject: "Team Offsite Planning — Vote Required", sender: "Jordan Okafor", priority: "MEDIUM", summary: "We need 3 more votes to finalize the location. Current top picks are Lisbon and Medellin.", importance_score: 49, deadline: null, reason: "Action required. Internal sender." },
-  { id: 5, subject: "Monthly Digest: Product Updates", sender: "Product Team", priority: "LOW", summary: "This month we shipped dark mode, AI summaries, and the new onboarding flow. Here's what's coming.", importance_score: 18, deadline: null, reason: "Newsletter/digest pattern." },
+  { id: 5, subject: "Monthly Digest: Product Updates", sender: "Product Team", priority: "LOW", summary: "This month we shipped dark mode, AI summaries, and the new onboarding flow. Here's what's coming next.", importance_score: 18, deadline: null, reason: "Newsletter/digest pattern." },
   { id: 6, subject: "Invoice #4821 — Overdue Notice", sender: "Billing Dept", priority: "HIGH", summary: "Invoice #4821 for $2,400 remains unpaid. Please action immediately to avoid service interruption.", importance_score: 88, deadline: new Date(Date.now() + 8 * 36e5).toISOString(), reason: "Financial content. Urgency signal. Deadline present." },
 ];
 
 const MOCK_AI = {
-  default:   "I found **3 upcoming deadlines** in your inbox:\n\n• **Today 5:00 PM** — Q4 Budget Review (Sarah Chen)\n• **Tomorrow 12:00 PM** — Partnership Proposal (Marcus Webb)\n• **Today EOD** — Invoice #4821 (Billing Dept)\n\nWould you like me to draft replies?",
+  default:   "I found **3 upcoming deadlines** in your inbox:\n\n• **Today 5:00 PM** — Q4 Budget Review (Sarah Chen)\n• **Tomorrow 12:00 PM** — Partnership Proposal (Marcus Webb)\n• **Today EOD** — Invoice #4821 (Billing Dept)\n\nWant me to help prioritize these?",
   deadlines: "Your upcoming deadlines:\n\n🔴 **Today 5:00 PM** — Q4 Budget Review\n🔴 **Today EOD** — Invoice #4821\n🟡 **Tomorrow 12:00 PM** — Partnership Proposal\n\n3 deadlines in the next 48 hours.",
-  summary:   "Inbox summary:\n\n📬 **6 emails** — 3 High, 2 Medium, 1 Low\n\n🔴 **Urgent**: Budget approval + overdue invoice\n🟡 **This week**: Partnership proposal + design handoff\n\nRecommend starting with the budget review.",
-  urgent:    "**3 HIGH priority** emails need your attention:\n\n1. Q4 Budget Review — due today\n2. Invoice #4821 — overdue\n3. Partnership Proposal — due tomorrow\n\nAll require immediate action.",
+  summary:   "Inbox summary:\n\n📬 **6 emails** — 3 Urgent, 2 Medium, 1 Low\n\n🔴 **Needs now**: Budget approval + overdue invoice\n🟡 **This week**: Partnership proposal + design handoff\n\nStart with the budget review.",
+  urgent:    "**3 URGENT** emails need your attention:\n\n1. Q4 Budget Review — due today\n2. Invoice #4821 — overdue\n3. Partnership Proposal — due tomorrow\n\nAll require immediate action.",
 };
 
-const getInitials = (s) => { const w = (s||"").trim().split(/\s+/); return ((w[0]?.[0]||"")+(w[1]?.[0]||w[0]?.[1]||"")).toUpperCase(); };
-const COLORS = ["#f87171","#a78bfa","#34d399","#fbbf24","#60a5fa","#fb923c","#e879f9","#2dd4bf"];
-const getColor = (s) => COLORS[(s?.charCodeAt(0)||0) % COLORS.length];
+// ── Utilities ─────────────────────────────────────────────────────────────────
+
+const AVATAR_BG   = ["#ede9fe","#fce7f3","#d1fae5","#fef3c7","#dbeafe","#ffe4e6","#e0f2fe","#ccfbf1"];
+const AVATAR_TEXT = ["#5b21b6","#9d174d","#065f46","#78350f","#1e3a8a","#9f1239","#0c4a6e","#134e4a"];
+const getAvatarStyle = (s) => { const i = (s?.charCodeAt(0) || 0) % 8; return { bg: AVATAR_BG[i], text: AVATAR_TEXT[i] }; };
+const getInitials   = (s) => { const w = (s || "").trim().split(/\s+/); return ((w[0]?.[0] || "") + (w[1]?.[0] || w[0]?.[1] || "")).toUpperCase(); };
+
 const formatDL = (dl) => {
   if (!dl) return null;
   try {
-    const d = new Date(dl); if (isNaN(d)||d.getFullYear()>2030) return null;
-    const h = (d-Date.now())/36e5;
-    if (h<0) return "Overdue";
-    if (h<24) return `Today ${d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`;
-    if (h<48) return `Tomorrow ${d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`;
-    return d.toLocaleDateString([],{month:"short",day:"numeric"});
+    const d = new Date(dl);
+    if (isNaN(d) || d.getFullYear() > 2030) return null;
+    const h = (d - Date.now()) / 36e5;
+    if (h < 0)  return "Overdue";
+    if (h < 24) return `Today ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+    if (h < 48) return `Tomorrow`;
+    return d.toLocaleDateString([], { month: "short", day: "numeric" });
   } catch { return null; }
 };
 
-const PriorityBadge = ({ p }) => {
-  const s = { HIGH:"bg-red-500/20 text-red-400 border-red-500/30", MEDIUM:"bg-yellow-500/20 text-yellow-400 border-yellow-500/30", LOW:"bg-slate-500/20 text-slate-400 border-slate-500/30" };
-  return <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full tracking-wider border ${(s[p]||s.LOW)}`}>{p||"LOW"}</span>;
-};
+// ── Modals ────────────────────────────────────────────────────────────────────
 
-// ── Trash Confirm Modal ───────────────────────────────────────────────────────
 const TrashConfirmModal = ({ lowCount, onConfirm, onClose }) => (
-  <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" style={{background:"rgba(0,0,0,0.75)",backdropFilter:"blur(8px)"}}>
-    <div className="glass-card rounded-t-3xl sm:rounded-2xl p-6 sm:p-8 w-full sm:max-w-sm border border-red-500/20 relative">
-      <button onClick={onClose} className="absolute top-4 right-4 text-slate-500 hover:text-white text-xl w-8 h-8 flex items-center justify-center">✕</button>
-      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-xl mb-4">🗑</div>
-      <h2 className="text-xl font-bold mb-2" style={{fontFamily:"Syne,sans-serif"}}>Trash {lowCount} LOW Priority?</h2>
-      <p className="text-slate-400 text-sm mb-6 leading-relaxed">
-        Emails will be moved to <strong className="text-white">Gmail Trash</strong>. Recoverable within 30 days.
-      </p>
-      <div className="flex gap-3">
-        <button onClick={onClose} className="flex-1 text-sm text-slate-300 border border-white/10 px-4 py-3 rounded-xl transition-all active:scale-95">Cancel</button>
-        <button onClick={onConfirm} className="flex-1 text-sm text-white font-semibold px-4 py-3 rounded-xl transition-all active:scale-95" style={{background:"linear-gradient(135deg,#ef4444,#dc2626)",boxShadow:"0 0 20px rgba(239,68,68,.3)"}}>Move to Trash</button>
+  <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ background: "rgba(15,23,42,.45)", backdropFilter: "blur(4px)" }}>
+    <div style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 20, maxWidth: 380, width: "100%", padding: 28, boxShadow: "0 20px 60px rgba(0,0,0,.15)", position: "relative" }}>
+      <button onClick={onClose} style={{ position: "absolute", top: 14, right: 14, width: 32, height: 32, borderRadius: 8, border: "1px solid #e2e8f0", background: "white", cursor: "pointer", fontSize: 16, color: "#94a3b8", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+      <div style={{ width: 48, height: 48, borderRadius: 14, background: "#fef2f2", border: "1px solid #fecaca", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, marginBottom: 16 }}>🗑️</div>
+      <h2 style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 18, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Trash {lowCount} low priority?</h2>
+      <p style={{ fontSize: 14, color: "#64748b", marginBottom: 24, lineHeight: 1.6 }}>These will move to Gmail Trash — recoverable for 30 days.</p>
+      <div style={{ display: "flex", gap: 10 }}>
+        <button onClick={onClose} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "1.5px solid #e2e8f0", background: "white", fontSize: 14, fontWeight: 600, color: "#475569", cursor: "pointer" }}>Cancel</button>
+        <button onClick={onConfirm} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "white", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Move to Trash</button>
       </div>
     </div>
   </div>
 );
 
-// ── Demo Modal ────────────────────────────────────────────────────────────────
 const DemoModal = ({ onClose }) => (
-  <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{background:"rgba(0,0,0,0.75)",backdropFilter:"blur(8px)"}}>
-    <div className="glass-card rounded-t-3xl sm:rounded-2xl p-6 sm:p-8 w-full sm:max-w-md border border-violet-500/20 relative">
-      <button onClick={onClose} className="absolute top-4 right-4 text-slate-500 hover:text-white text-xl w-8 h-8 flex items-center justify-center">✕</button>
-      {/* Mobile drag handle */}
-      <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-5 sm:hidden"></div>
-      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-xl mb-4">📬</div>
-      <h2 className="text-xl font-bold mb-2" style={{fontFamily:"Syne,sans-serif"}}>Request Live Demo</h2>
-      <p className="text-slate-400 text-sm mb-4 leading-relaxed">Want to see Smart AI Inbox with your real Gmail? I'll add you as a tester.</p>
-      <div className="space-y-2 mb-5">
-        {[["🧠","4-model ML pipeline"],["🔍","Semantic search with pgvector"],["⏰","AI deadline extraction"],["📊","K-Means topic clustering"]].map(([icon,text],i) => (
-          <div key={i} className="flex items-center gap-3 text-sm text-slate-300"><span>{icon}</span><span>{text}</span></div>
+  <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ background: "rgba(15,23,42,.45)", backdropFilter: "blur(4px)" }}>
+    <div style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 20, maxWidth: 420, width: "100%", padding: 28, boxShadow: "0 20px 60px rgba(0,0,0,.15)", position: "relative" }}>
+      <button onClick={onClose} style={{ position: "absolute", top: 14, right: 14, width: 32, height: 32, borderRadius: 8, border: "1px solid #e2e8f0", background: "white", cursor: "pointer", fontSize: 16, color: "#94a3b8", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+      <div style={{ width: 48, height: 48, borderRadius: 14, background: "#f5f3ff", border: "1px solid #ddd6fe", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, marginBottom: 16 }}>📬</div>
+      <h2 style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 18, fontWeight: 800, color: "#0f172a", marginBottom: 6 }}>Request Live Demo</h2>
+      <p style={{ fontSize: 13, color: "#64748b", marginBottom: 16, lineHeight: 1.6 }}>Want to try with your real Gmail? I'll add you as an approved tester.</p>
+      <div style={{ background: "#f8f7ff", borderRadius: 12, padding: "14px 16px", marginBottom: 18, border: "1px solid #ede9fe" }}>
+        {[["🧠","4-model ML pipeline scores every email"],["🔍","Semantic search powered by pgvector"],["⏰","AI extracts deadlines from email text"],["📊","K-Means clusters emails by topic"]].map(([icon, text], i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "#374151", marginBottom: i < 3 ? 8 : 0 }}><span>{icon}</span><span>{text}</span></div>
         ))}
       </div>
-      <button onClick={() => { navigator.clipboard.writeText("dhanashreebansode70@gmail.com"); alert("Email copied!"); }} className="glow-btn w-full text-white text-sm font-semibold px-4 py-3.5 rounded-xl flex items-center justify-center gap-2 active:scale-95">
-        📋 Copy Email Address
+      <button onClick={() => { navigator.clipboard.writeText("dhanashreebansode70@gmail.com"); alert("Copied! Send a message to get access."); }} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#7c3aed,#4f46e5)", color: "white", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+        📋 Copy Contact Email
       </button>
-      <p className="text-center text-slate-400 text-xs mt-2">dhanashreebansode70@gmail.com</p>
-      <p className="text-center text-slate-600 text-xs mt-2">Or <a href="https://linkedin.com/in/dhanashree2311" target="_blank" rel="noreferrer" className="text-violet-400">LinkedIn ↗</a></p>
+      <p style={{ textAlign: "center", fontSize: 12, color: "#94a3b8", marginTop: 12 }}>
+        Or <a href="https://linkedin.com/in/dhanashree2311" target="_blank" rel="noreferrer" style={{ color: "#7c3aed", fontWeight: 600 }}>DM on LinkedIn ↗</a>
+      </p>
     </div>
   </div>
 );
 
 // ── Main App ──────────────────────────────────────────────────────────────────
+
 export default function SmartInbox() {
   const [sessionToken, setSessionToken]         = useState(null);
   const [userEmail, setUserEmail]               = useState(null);
@@ -96,17 +94,16 @@ export default function SmartInbox() {
   const [status, setStatus]                     = useState("DEMO");
   const [filter, setFilter]                     = useState("ALL");
   const [showDemo, setShowDemo]                 = useState(false);
-  const [stats, setStats]                       = useState({total:6,high:3,medium:2,deadlines:3});
-  // Mobile tab: "inbox" | "ai" | "actions"
+  const [stats, setStats]                       = useState({ total: 6, high: 3, medium: 2, deadlines: 3 });
   const [mobileTab, setMobileTab]               = useState("inbox");
 
   const loggedIn = !!sessionToken;
 
   const calcStats = (list) => setStats({
     total:     list.length,
-    high:      list.filter(e=>e.priority==="HIGH").length,
-    medium:    list.filter(e=>e.priority==="MEDIUM").length,
-    deadlines: list.filter(e=>e.deadline).length,
+    high:      list.filter(e => e.priority === "HIGH").length,
+    medium:    list.filter(e => e.priority === "MEDIUM").length,
+    deadlines: list.filter(e => e.deadline).length,
   });
 
   useEffect(() => {
@@ -114,32 +111,89 @@ export default function SmartInbox() {
     const token  = params.get("session");
     const email  = params.get("email");
     const error  = params.get("error");
-    if (error) { alert("Sign in failed. Make sure you're an approved tester."); window.history.replaceState({}, "", "/"); return; }
-    if (token && email) {
-      setSessionToken(token); setUserEmail(email); setStatus("SIGNED IN");
+
+    if (error) {
+      alert("Sign in failed — make sure you're an approved tester.");
+      window.history.replaceState({}, "", "/");
+      return;
+    }
+
+    if (token) {
+      // Fresh login — save to localStorage so page refreshes keep the session
+      localStorage.setItem("sai_token", token);
+      if (email) localStorage.setItem("sai_email", email);
+      setSessionToken(token);
+      setStatus("SIGNED IN");
+      if (email) setUserEmail(email);
       window.history.replaceState({}, "", "/");
       loadAndSync(token);
+      return;
+    }
+
+    // No URL params — check localStorage for a persisted session
+    const saved      = localStorage.getItem("sai_token");
+    const savedEmail = localStorage.getItem("sai_email");
+    if (saved) {
+      setSessionToken(saved);
+      setStatus("SIGNED IN");
+      if (savedEmail) setUserEmail(savedEmail);
+      loadAndSync(saved);
     }
   }, []);
 
-  const authHeaders = (token) => ({ "Content-Type":"application/json", "x-session-token": token || sessionToken });
+  const authHeaders = (token) => ({ "Content-Type": "application/json", "x-session-token": token || sessionToken });
 
   const loadAndSync = async (token) => {
     setSyncing(true); setStatus("SYNCING...");
     try {
       await fetch(`${API}/gmail-sync`, { headers: authHeaders(token) });
-      const r    = await fetch(`${API}/important-emails`, { headers: authHeaders(token) });
-      const d    = await r.json();
+      const r = await fetch(`${API}/important-emails`, { headers: authHeaders(token) });
+      if (!r.ok) throw new Error("Failed to load emails");
+      const d = await r.json();
       const list = Array.isArray(d) ? d : (d.emails || []);
-      if (list.length > 0) { setEmails(list); calcStats(list); }
-      setStatus("SYNCED");
+      // Always replace mock data with real data (even if empty — logged in user has no mock)
+      setEmails(list);
+      calcStats(list);
+      setStatus("SYNCED ✓");
     } catch (e) { console.error(e); setStatus("ERROR"); }
     finally { setSyncing(false); }
   };
 
+  const [feedbackToast, setFeedbackToast] = useState(null);
+
+  const handleFeedback = async (email, newPriority) => {
+    if (!loggedIn || !email.gmail_message_id) return;
+    try {
+      const r = await fetch(
+        `${API}/feedback?gmail_message_id=${email.gmail_message_id}&correct_priority=${newPriority}`,
+        { method: "POST", headers: authHeaders() }
+      );
+      const d = await r.json();
+      if (!r.ok) throw new Error(d?.detail || `Server error ${r.status}`);
+
+      const updated = emails.map(e =>
+        e.gmail_message_id === email.gmail_message_id
+          ? { ...e, priority: d.new_priority, importance_score: d.new_score, reason: "User feedback" }
+          : e
+      );
+      setEmails(updated);
+      calcStats(updated);
+      setSelected(null);
+      setFilter(d.new_priority);
+      setFeedbackToast({ msg: d.message, count: d.feedback_total });
+      setTimeout(() => setFeedbackToast(null), 3500);
+    } catch (e) {
+      console.error("Feedback error:", e.message);
+      setFeedbackToast({ msg: `Couldn't save: ${e.message}`, error: true });
+      setTimeout(() => setFeedbackToast(null), 4000);
+    }
+  };
+
   const handleSignIn  = () => { window.open(`${API}/auth/login`, "_self"); };
   const handleSignOut = async () => {
-    if (sessionToken) await fetch(`${API}/auth/logout?session_token=${sessionToken}`).catch(()=>{});
+    if (sessionToken) await fetch(`${API}/auth/logout?session_token=${sessionToken}`).catch(() => {});
+    localStorage.removeItem("sai_token");
+    localStorage.removeItem("sai_email");
     setSessionToken(null); setUserEmail(null);
     setEmails(MOCK_EMAILS); calcStats(MOCK_EMAILS);
     setStatus("DEMO"); setAiOut(MOCK_AI.default);
@@ -153,305 +207,291 @@ export default function SmartInbox() {
       const r = await fetch(`${API}/important-emails`, { headers: authHeaders() });
       const d = await r.json();
       const list = Array.isArray(d) ? d : (d.emails || []);
-      if (list.length > 0) { setEmails(list); calcStats(list); }
-      setStatus("SYNCED");
+      setEmails(list);
+      calcStats(list);
+      setStatus("SYNCED ✓");
     } catch { setStatus("ERROR"); }
     finally { setSyncing(false); }
   };
 
   const handleTrashLowPriority = async () => {
     setShowTrashConfirm(false); setTrashing(true);
+    const prevEmails = emails;
     try {
-      const r = await fetch(`${API}/trash-low-priority`, { method:"POST", headers: authHeaders() });
+      const r = await fetch(`${API}/trash-low-priority`, { method: "POST", headers: authHeaders() });
+      if (!r.ok) throw new Error("Server error");
       const d = await r.json();
       setTrashResult(d);
       const remaining = emails.filter(e => e.priority !== "LOW");
       setEmails(remaining); calcStats(remaining);
       setTimeout(() => setTrashResult(null), 4000);
-    } catch (e) { console.error(e); setTrashResult({ error: "Failed to reach backend." }); }
-    finally { setTrashing(false); }
+    } catch (e) {
+      console.error(e);
+      setEmails(prevEmails);
+      setTrashResult({ error: "Failed to reach backend." });
+      setTimeout(() => setTrashResult(null), 4000);
+    } finally { setTrashing(false); }
   };
 
   const handleTrashSingle = async (email, ev) => {
     ev.stopPropagation();
     if (!email.gmail_message_id) return;
+    const prevEmails = emails;
     try {
-      await fetch(`${API}/trash-email/${email.gmail_message_id}`, { method:"POST", headers: authHeaders() });
+      const r = await fetch(`${API}/trash-email/${email.gmail_message_id}`, { method: "POST", headers: authHeaders() });
+      if (!r.ok) throw new Error("Failed");
       const remaining = emails.filter(e => e.gmail_message_id !== email.gmail_message_id);
       setEmails(remaining); calcStats(remaining);
-    } catch (e) { console.error("Failed to trash:", e); }
+    } catch (e) {
+      console.error("Failed to trash:", e);
+      setEmails(prevEmails);
+    }
   };
 
   const handleAsk = async (q) => {
-    const question = q || query;
-    if (!question.trim()) return;
-    setLoading(true); setQuery("");
-    setMobileTab("ai"); // switch to AI tab on mobile when asking
+    const question = (q || query).trim();
+    if (!question) return;
+    if (question.length > 500) { alert("Question too long (max 500 characters)"); return; }
+    setLoading(true); setQuery(""); setMobileTab("ai");
     if (!loggedIn) {
-      await new Promise(r => setTimeout(r, 900));
+      await new Promise(r => setTimeout(r, 800));
       const ql = question.toLowerCase();
-      if (ql.includes("deadline"))                              setAiOut(MOCK_AI.deadlines);
-      else if (ql.includes("summary")||ql.includes("overview")) setAiOut(MOCK_AI.summary);
-      else if (ql.includes("urgent")||ql.includes("high"))      setAiOut(MOCK_AI.urgent);
-      else                                                       setAiOut(MOCK_AI.default);
+      if (ql.includes("deadline"))                               setAiOut(MOCK_AI.deadlines);
+      else if (ql.includes("summary") || ql.includes("overview")) setAiOut(MOCK_AI.summary);
+      else if (ql.includes("urgent") || ql.includes("high"))      setAiOut(MOCK_AI.urgent);
+      else                                                         setAiOut(MOCK_AI.default);
       setLoading(false); return;
     }
     try {
       const r = await fetch(`${API}/ask?question=${encodeURIComponent(question)}`, { headers: authHeaders() });
       const d = await r.json();
       setAiOut(d.answer || "No answer found.");
-    } catch { setAiOut("Failed to reach backend."); }
+    } catch { setAiOut("Couldn't reach the backend. Try again in a moment."); }
     finally { setLoading(false); }
   };
 
-  const filtered     = filter==="ALL" ? emails : emails.filter(e=>e.priority===filter);
-  const lowCount     = emails.filter(e=>e.priority==="LOW").length;
-  const statusColor  = status==="SYNCED"?"emerald":status==="DEMO"||status.includes("...")?"yellow":"red";
-  const avatarLetters = userEmail ? userEmail.slice(0,2).toUpperCase() : "DB";
+  const filtered    = filter === "ALL" ? emails : emails.filter(e => e.priority === filter);
+  const lowCount    = emails.filter(e => e.priority === "LOW").length;
+  const statusGood  = status.includes("SYNCED");
+  const avatarLetters = userEmail ? userEmail.slice(0, 2).toUpperCase() : "DB";
 
-  const statCards = [
-    { label:"Total",     value:stats.total,     icon:"✉",  color:"from-violet-500/20 to-purple-500/10",  border:"border-violet-500/20" },
-    { label:"High",      value:stats.high,      icon:"🔴", color:"from-red-500/20 to-rose-500/10",        border:"border-red-500/20"   },
-    { label:"Medium",    value:stats.medium,    icon:"🟡", color:"from-amber-500/20 to-yellow-500/10",    border:"border-amber-500/20" },
-    { label:"Deadlines", value:stats.deadlines, icon:"⏰", color:"from-sky-500/20 to-cyan-500/10",        border:"border-sky-500/20"   },
-  ];
-
-  const renderAI = (text) => text.split("\n").map((line,i) => {
+  const renderAI = (text) => text.split("\n").map((line, i) => {
     const parts = line.split(/\*\*(.*?)\*\*/g);
-    return <p key={i} className={`${line===""?"mt-2":"leading-relaxed"} text-slate-300 text-sm`}>{parts.map((p,j) => j%2===1 ? <span key={j} className="text-white font-semibold">{p}</span> : p)}</p>;
+    return (
+      <p key={i} style={{ marginBottom: line === "" ? 0 : 2, lineHeight: 1.65, fontSize: 14, color: "#374151", marginTop: line === "" ? 8 : 0 }}>
+        {parts.map((p, j) => j % 2 === 1 ? <strong key={j} style={{ color: "#0f172a", fontWeight: 700 }}>{p}</strong> : p)}
+      </p>
+    );
   });
 
+  const S = styles; // shorthand
+
   return (
-    <div className="min-h-screen bg-[#080b14] text-white" style={{fontFamily:"'DM Sans',sans-serif"}}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap');
-        *{box-sizing:border-box}
-        .bg-mesh{background-image:radial-gradient(ellipse 80% 50% at 20% 10%,rgba(139,92,246,.12) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 80% 80%,rgba(59,130,246,.10) 0%,transparent 60%)}
-        .glass{background:rgba(255,255,255,.03);backdrop-filter:blur(20px)}
-        .glass-card{background:rgba(255,255,255,.035);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.07);transition:all .22s ease}
-        .email-card{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06);transition:all .2s ease;cursor:pointer;-webkit-tap-highlight-color:transparent}
-        .email-card:hover{background:rgba(139,92,246,.08);border-color:rgba(139,92,246,.25)}
-        @media(min-width:640px){.email-card:hover{transform:translateX(3px)}}
-        .email-card.sel{background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.4)}
-        .email-card:active{background:rgba(139,92,246,.1)}
-        .glow-btn{background:linear-gradient(135deg,#7c3aed,#4f46e5);box-shadow:0 0 20px rgba(124,58,237,.4),0 0 40px rgba(124,58,237,.15);transition:all .25s ease;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
-        .glow-btn:hover{box-shadow:0 0 30px rgba(124,58,237,.6),0 0 60px rgba(124,58,237,.25)}
-        .glow-btn:active{transform:scale(0.97);opacity:.9}
-        .glow-btn:disabled{opacity:.6;cursor:not-allowed}
-        .stat-card{position:relative;overflow:hidden;border-radius:16px;transition:transform .2s ease}
-        .stat-card:active{transform:scale(0.97)}
-        @media(min-width:640px){.stat-card:hover{transform:translateY(-3px)}}
-        .ai-input{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);color:white;outline:none;transition:all .2s;-webkit-appearance:none;font-size:16px}
-        .ai-input:focus{border-color:rgba(139,92,246,.5);background:rgba(139,92,246,.06);box-shadow:0 0 0 3px rgba(139,92,246,.1)}
-        .ai-input::placeholder{color:rgba(148,163,184,.5)}
-        .f-btn{font-size:11px;padding:5px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.08);color:rgba(148,163,184,.7);background:transparent;cursor:pointer;transition:all .18s;font-weight:500;-webkit-tap-highlight-color:transparent}
-        .f-btn:active{background:rgba(139,92,246,.15)}
-        .f-btn.act{background:rgba(139,92,246,.2);border-color:rgba(139,92,246,.5);color:#c4b5fd}
-        .scrollbar-hide::-webkit-scrollbar{display:none}
-        .scrollbar-hide{-ms-overflow-style:none;scrollbar-width:none}
-        .dp{display:inline-block;width:6px;height:6px;border-radius:50%}
-        .dp-green{background:#4ade80;box-shadow:0 0 6px #4ade80;animation:pulse 2s infinite}
-        .dp-yellow{background:#fbbf24;box-shadow:0 0 6px #fbbf24;animation:pulse .8s infinite}
-        .dp-red{background:#f87171;box-shadow:0 0 6px #f87171}
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-        .shimmer{background:linear-gradient(90deg,rgba(255,255,255,.03) 0%,rgba(255,255,255,.08) 50%,rgba(255,255,255,.03) 100%);background-size:200% 100%;animation:shimmer 1.5s infinite}
-        @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
-        .spin{animation:spin 1s linear infinite}
-        @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-        .trash-btn{font-size:10px;color:rgba(248,113,113,.6);border:1px solid rgba(239,68,68,.1);border-radius:20px;padding:4px 10px;background:transparent;cursor:pointer;transition:all .18s;margin-top:6px;-webkit-tap-highlight-color:transparent}
-        .trash-btn:active{color:#f87171;border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.08)}
-        .bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:40;background:rgba(8,11,20,.95);backdrop-filter:blur(20px);border-top:1px solid rgba(255,255,255,.07);padding-bottom:env(safe-area-inset-bottom)}
-        .bottom-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:10px 4px;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:all .18s;border:none;background:transparent;color:rgba(148,163,184,.6)}
-        .bottom-nav-btn.active{color:#a78bfa}
-        .bottom-nav-btn:active{opacity:.7}
-        .mobile-panel{display:none}
-        @media(max-width:1279px){.mobile-panel{display:block}.desktop-only{display:none}}
-        @media(min-width:1280px){.mobile-panel{display:none}.desktop-only{display:block}.bottom-nav{display:none}}
-        .safe-bottom{padding-bottom:calc(70px + env(safe-area-inset-bottom))}
-        @media(min-width:1280px){.safe-bottom{padding-bottom:2rem}}
-      `}</style>
+    <div style={{ minHeight: "100vh", background: "#f8f7ff", fontFamily: "'Inter','DM Sans',sans-serif" }}>
+      <style>{CSS}</style>
 
-      {showDemo         && <DemoModal onClose={()=>setShowDemo(false)} />}
-      {showTrashConfirm && <TrashConfirmModal lowCount={lowCount} onConfirm={handleTrashLowPriority} onClose={()=>setShowTrashConfirm(false)} />}
+      {showDemo         && <DemoModal         onClose={() => setShowDemo(false)} />}
+      {showTrashConfirm && <TrashConfirmModal lowCount={lowCount} onConfirm={handleTrashLowPriority} onClose={() => setShowTrashConfirm(false)} />}
 
-      {/* Toast */}
-      {trashResult && (
-        <div className="fixed bottom-20 xl:bottom-6 right-4 xl:right-6 z-50 glass-card rounded-xl px-4 py-3 border border-green-500/20 flex items-center gap-3 shadow-xl max-w-[calc(100vw-2rem)]">
-          <span className="text-green-400 text-lg">{trashResult.error ? "⚠" : "✓"}</span>
-          <span className="text-sm text-slate-200">{trashResult.error ? trashResult.error : `Moved ${trashResult.trashed} emails to Trash`}</span>
+      {/* Feedback toast */}
+      {feedbackToast && (
+        <div className="toast" style={{ borderColor: feedbackToast.error ? "#fca5a5" : "#a5f3c6", bottom: trashResult ? 120 : undefined }}>
+          <span style={{ fontSize: 18 }}>{feedbackToast.error ? "⚠️" : "🧠"}</span>
+          <div>
+            <p style={{ fontSize: 13, color: "#0f172a", fontWeight: 600 }}>{feedbackToast.error ? feedbackToast.msg : "Model updated!"}</p>
+            {!feedbackToast.error && <p style={{ fontSize: 11, color: "#64748b" }}>{feedbackToast.msg}</p>}
+          </div>
         </div>
       )}
 
-      <div className="bg-mesh min-h-screen">
-        {/* Demo banner */}
+      {/* Toast */}
+      {trashResult && (
+        <div className="toast" style={{ borderColor: trashResult.error ? "#fca5a5" : "#86efac" }}>
+          <span style={{ fontSize: 18 }}>{trashResult.error ? "⚠️" : "✅"}</span>
+          <span style={{ fontSize: 14, color: "#1e293b" }}>{trashResult.error ? trashResult.error : `Moved ${trashResult.trashed} emails to Trash`}</span>
+        </div>
+      )}
+
+      {/* Demo banner */}
+      {!loggedIn && (
+        <div style={{ background: "#fffbeb", borderBottom: "1px solid #fde68a", padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 13, color: "#92400e", fontWeight: 500 }}>✨ Demo mode — you're viewing sample emails. Sign in to use your real Gmail.</span>
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <button onClick={handleSignIn} className="btn-ghost-sm">Sign In with Google</button>
+            <button onClick={() => setShowDemo(true)} className="btn-amber-sm">Request Access →</button>
+          </div>
+        </div>
+      )}
+
+      {/* Nav */}
+      <nav style={{ background: "white", borderBottom: "1px solid #e2e8f0", position: "sticky", top: 0, zIndex: 40, boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
+        <div className="container" style={{ height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          {/* Logo */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#7c3aed,#4f46e5)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 14, fontWeight: 700, flexShrink: 0 }}>✦</div>
+            <span style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 800, fontSize: 16, color: "#0f172a" }}>Smart AI Inbox</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 100, padding: "4px 10px" }} className="hide-xs">
+              <span className={`dot ${statusGood ? "dot-green" : status === "DEMO" ? "dot-yellow" : "dot-red"}`}></span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b" }}>{status}</span>
+            </div>
+          </div>
+
+          {/* Right */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {!loggedIn ? (
+              <>
+                <button onClick={() => setShowDemo(true)} className="btn-ghost hide-sm">Request Demo</button>
+                <button onClick={handleSignIn} className="btn-primary">
+                  <GoogleIcon /> Sign In with Google
+                </button>
+              </>
+            ) : (
+              <>
+                <span style={{ fontSize: 12, color: "#94a3b8", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} className="hide-sm">{userEmail}</span>
+                <button onClick={handleSync} disabled={syncing} className="btn-primary">
+                  {syncing ? <SpinIcon /> : <SyncIcon />}
+                  <span>{syncing ? "Syncing..." : "Sync Gmail"}</span>
+                </button>
+                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#7c3aed,#4f46e5)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 12, fontWeight: 700, flexShrink: 0, border: "2px solid #ede9fe", cursor: "pointer" }} title={userEmail} onClick={handleSignOut}>
+                  {avatarLetters}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </nav>
+
+      {/* Page */}
+      <div className="container safe-pb" style={{ paddingTop: 24 }}>
+
+        {/* ── HERO — demo mode only ── */}
         {!loggedIn && (
-          <div className="border-b border-yellow-500/20 bg-yellow-500/5 px-4 py-2 flex items-center justify-between gap-2">
-            <span className="text-xs text-yellow-400/80 hidden sm:block">✨ <strong>Demo mode</strong> — sample data</span>
-            <span className="text-xs text-yellow-400/80 sm:hidden">✨ Demo mode</span>
-            <div className="flex items-center gap-2">
-              <button onClick={handleSignIn} className="text-xs text-yellow-400 border border-yellow-500/30 rounded-full px-3 py-1.5 active:bg-yellow-500/10 transition-all">Sign in</button>
-              <button onClick={()=>setShowDemo(true)} className="text-xs text-white bg-yellow-500/20 border border-yellow-500/30 rounded-full px-3 py-1.5 active:bg-yellow-500/30 transition-all font-medium">Request Demo →</button>
+          <div className="card" style={{ padding: "32px 24px", textAlign: "center", marginBottom: 24, background: "linear-gradient(160deg,#faf9ff 0%,#f0ebff 100%)" }}>
+            <span style={{ display: "inline-block", background: "#ede9fe", color: "#6d28d9", fontSize: 12, fontWeight: 700, padding: "5px 14px", borderRadius: 100, border: "1px solid #ddd6fe", marginBottom: 16 }}>
+              ✦ AI-Powered Gmail Management
+            </span>
+            <h1 style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 800, fontSize: "clamp(22px,5vw,32px)", color: "#0f172a", marginBottom: 12, lineHeight: 1.25 }}>
+              Your inbox,<br />finally under control.
+            </h1>
+            <p style={{ fontSize: 15, color: "#64748b", maxWidth: 480, margin: "0 auto 24px", lineHeight: 1.7 }}>
+              4 ML models read your Gmail, score every email 0–100, extract deadlines automatically, and surface exactly what needs your attention.
+            </p>
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8 }}>
+              {[["🧠","XGBoost Scoring"],["🌲","Random Forest Classifier"],["⏰","Deadline Extraction"],["🔵","K-Means Clustering"]].map(([icon, label]) => (
+                <span key={label} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "white", border: "1px solid #e2e8f0", borderRadius: 100, padding: "6px 14px", fontSize: 12, fontWeight: 600, color: "#475569", boxShadow: "0 1px 2px rgba(0,0,0,.04)" }}>{icon} {label}</span>
+              ))}
             </div>
           </div>
         )}
 
-        {/* Nav */}
-        <nav className="glass border-b border-white/[0.06] sticky top-0 z-40">
-          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-xs sm:text-sm shadow-lg shadow-violet-500/30">✦</div>
-              <span className="text-base sm:text-lg font-bold tracking-tight" style={{fontFamily:"Syne,sans-serif"}}>Smart AI Inbox</span>
-              <div className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 border bg-${statusColor}-500/10 border-${statusColor}-500/20`}>
-                <span className={`dp dp-${statusColor==="emerald"?"green":statusColor}`}></span>
-                <span className={`text-[10px] font-medium text-${statusColor}-400 hidden sm:block`}>{status}</span>
-              </div>
+        {/* ── Greeting — logged in only ── */}
+        {loggedIn && (
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 }}>
+            <div>
+              <h1 style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 800, fontSize: 20, color: "#0f172a", marginBottom: 4 }}>
+                Hey, {userEmail?.split("@")[0]} 👋
+              </h1>
+              <p style={{ fontSize: 14, color: "#64748b" }}>
+                <span style={{ color: "#ef4444", fontWeight: 700 }}>{stats.high} urgent</span> emails are waiting for you
+              </p>
             </div>
-            <div className="flex items-center gap-2">
-              {!loggedIn ? (
-                <>
-                  <button onClick={()=>setShowDemo(true)} className="text-xs sm:text-sm text-slate-300 border border-white/10 px-3 sm:px-4 py-2 rounded-xl transition-all hidden sm:block">Request Demo</button>
-                  <button onClick={handleSignIn} className="glow-btn text-white text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2 rounded-xl flex items-center gap-1.5">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                    Sign In
-                  </button>
-                </>
+            <button onClick={handleSignOut} className="btn-ghost hide-sm" style={{ fontSize: 13 }}>Sign Out</button>
+          </div>
+        )}
+
+        {/* ── Stats ── */}
+        <div className="stats-grid" style={{ marginBottom: 24 }}>
+          {[
+            { label: "Total Emails",  value: stats.total,     icon: "📬", accent: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
+            { label: "Urgent",        value: stats.high,      icon: "🔴", accent: "#ef4444", bg: "#fef2f2", border: "#fecaca" },
+            { label: "Medium",        value: stats.medium,    icon: "🟡", accent: "#d97706", bg: "#fffbeb", border: "#fde68a" },
+            { label: "Deadlines",     value: stats.deadlines, icon: "⏰", accent: "#0284c7", bg: "#f0f9ff", border: "#bae6fd" },
+          ].map(s => (
+            <div key={s.label} style={{ background: "white", borderRadius: 16, padding: "18px 20px", border: `1px solid ${s.border}` }}>
+              <div style={{ fontSize: 22, marginBottom: 10 }}>{s.icon}</div>
+              <div style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 800, fontSize: 30, color: s.accent, lineHeight: 1, marginBottom: 4 }}>{s.value}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8" }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Pipeline explainer — demo mode only ── */}
+        {!loggedIn && (
+          <div className="card" style={{ padding: 20, marginBottom: 24 }}>
+            <p style={{ fontSize: 11, fontWeight: 800, color: "#7c3aed", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 14 }}>The AI Pipeline</p>
+            <div className="pipeline-grid">
+              {[
+                { n: "01", icon: "📊", title: "XGBoost scores urgency", desc: "15 hand-engineered features rate every email 0–100. Sender reputation, urgency keywords, financial signals." },
+                { n: "02", icon: "🌲", title: "Random Forest classifies", desc: "384-dimensional embeddings feed into a trained classifier. Labels every email HIGH, MEDIUM, or LOW." },
+                { n: "03", icon: "⏰", title: "Deadline extracted", desc: "'By Friday' or '5pm today' becomes a real date. Regex + dateutil with confidence scoring — no hallucinations." },
+                { n: "04", icon: "🔵", title: "K-Means clusters topics", desc: "Auto-groups Finance, Job Apps, Newsletters, Team comms. Silhouette score picks the optimal number of clusters." },
+              ].map(item => (
+                <div key={item.n} style={{ background: "#faf9ff", border: "1px solid #ede9fe", borderRadius: 12, padding: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                    <span style={{ fontSize: 20 }}>{item.icon}</span>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: "#a78bfa", letterSpacing: "0.05em" }}>{item.n}</span>
+                  </div>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: "#1e1b4b", marginBottom: 4 }}>{item.title}</p>
+                  <p style={{ fontSize: 11, color: "#64748b", lineHeight: 1.6 }}>{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Desktop layout ── */}
+        <div className="desktop-grid desktop-only">
+          <EmailList
+            filtered={filtered} filter={filter} setFilter={setFilter}
+            loggedIn={loggedIn} lowCount={lowCount} trashing={trashing}
+            setShowTrashConfirm={setShowTrashConfirm} selected={selected}
+            setSelected={setSelected} handleTrashSingle={handleTrashSingle}
+            handleFeedback={handleFeedback}
+          />
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <AIPanel loggedIn={loggedIn} loading={loading} aiOut={aiOut} query={query} setQuery={setQuery} handleAsk={handleAsk} renderAI={renderAI} handleSignIn={handleSignIn} />
+            <QuickActions loggedIn={loggedIn} syncing={syncing} handleSync={handleSync} setFilter={setFilter} handleAsk={handleAsk} setShowTrashConfirm={setShowTrashConfirm} handleSignIn={handleSignIn} setShowDemo={setShowDemo} handleSignOut={handleSignOut} />
+          </div>
+        </div>
+
+        {/* ── Mobile layout ── */}
+        <div className="mobile-panel">
+          {mobileTab === "inbox"   && <EmailList filtered={filtered} filter={filter} setFilter={setFilter} loggedIn={loggedIn} lowCount={lowCount} trashing={trashing} setShowTrashConfirm={setShowTrashConfirm} selected={selected} setSelected={setSelected} handleTrashSingle={handleTrashSingle} handleFeedback={handleFeedback} mobile />}
+          {mobileTab === "ai"      && <AIPanel loggedIn={loggedIn} loading={loading} aiOut={aiOut} query={query} setQuery={setQuery} handleAsk={handleAsk} renderAI={renderAI} handleSignIn={handleSignIn} mobile />}
+          {mobileTab === "actions" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <QuickActions loggedIn={loggedIn} syncing={syncing} handleSync={handleSync} setFilter={setFilter} handleAsk={handleAsk} setShowTrashConfirm={setShowTrashConfirm} handleSignIn={handleSignIn} setShowDemo={setShowDemo} handleSignOut={handleSignOut} mobile setMobileTab={setMobileTab} />
+              {loggedIn ? (
+                <div className="card" style={{ padding: 16 }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Account</p>
+                  <p style={{ fontSize: 13, color: "#334155", marginBottom: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userEmail}</p>
+                  <button onClick={handleSignOut} style={{ width: "100%", padding: "10px 0", borderRadius: 10, border: "1px solid #fecaca", background: "#fef2f2", color: "#ef4444", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Sign Out</button>
+                </div>
               ) : (
-                <>
-                  <span className="text-xs text-slate-400 hidden md:block truncate max-w-[140px]">{userEmail}</span>
-                  <button onClick={handleSync} disabled={syncing} className="glow-btn text-white text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2 rounded-xl flex items-center gap-1.5">
-                    {syncing ? <svg className="spin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
-                             : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>}
-                    <span className="hidden sm:inline">{syncing?"Syncing...":"Gmail Sync"}</span>
-                    <span className="sm:hidden">{syncing?"...":"Sync"}</span>
-                  </button>
-                  <button onClick={handleSignOut} className="text-xs text-slate-400 border border-white/10 px-2.5 py-2 rounded-xl transition-all hidden sm:block">Out</button>
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-violet-400 to-fuchsia-500 flex items-center justify-center text-xs font-bold ring-2 ring-violet-500/20">{avatarLetters}</div>
-                </>
+                <div className="card" style={{ padding: 16 }}>
+                  <button onClick={handleSignIn} className="btn-primary" style={{ width: "100%", justifyContent: "center", marginBottom: 8 }}>Sign In with Google</button>
+                  <button onClick={() => setShowDemo(true)} className="btn-ghost" style={{ width: "100%", justifyContent: "center" }}>Request Demo</button>
+                </div>
               )}
             </div>
-          </div>
-        </nav>
-
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-5 sm:py-8 safe-bottom">
-          {/* Header */}
-          <div className="mb-5 sm:mb-8">
-            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
-              {loggedIn ? `Morning, ${userEmail?.split("@")[0]} ☀️` : "Smart AI Inbox ✦"}
-            </h1>
-            <p className="text-slate-500 text-xs sm:text-sm mt-1">
-              {loggedIn
-                ? <><span className="text-red-400 font-medium">{stats.high} high priority</span>{` emails need attention`}</>
-                : <>AI-powered inbox. <span className="text-violet-400 cursor-pointer" onClick={()=>setShowDemo(true)}>Request live access →</span></>}
-            </p>
-          </div>
-
-          {/* Stats — 2x2 on mobile, 4x1 on desktop */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5 sm:mb-8">
-            {statCards.map((s,i) => (
-              <div key={i} className={`stat-card p-4 sm:p-5 bg-gradient-to-br ${s.color} border ${s.border}`}>
-                <div className="flex items-start justify-between mb-2 sm:mb-3">
-                  <span className="text-lg sm:text-xl">{s.icon}</span>
-                </div>
-                <div className="text-2xl sm:text-3xl font-bold tracking-tight mb-0.5" style={{fontFamily:"Syne,sans-serif"}}>{s.value}</div>
-                <div className="text-[11px] sm:text-xs text-slate-400 font-medium">{s.label}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* ── DESKTOP LAYOUT (xl+) ── */}
-          <div className="desktop-only grid xl:grid-cols-[1fr_420px] gap-6">
-            {/* Email list */}
-            <EmailList
-              filtered={filtered} filter={filter} setFilter={setFilter}
-              loggedIn={loggedIn} lowCount={lowCount} trashing={trashing}
-              setShowTrashConfirm={setShowTrashConfirm} selected={selected}
-              setSelected={setSelected} handleTrashSingle={handleTrashSingle}
-            />
-            {/* Right panel */}
-            <div className="flex flex-col gap-4">
-              <AIPanel
-                loggedIn={loggedIn} loading={loading} aiOut={aiOut}
-                query={query} setQuery={setQuery} handleAsk={handleAsk}
-                handleSignIn={handleSignIn}
-              />
-              <QuickActions
-                loggedIn={loggedIn} syncing={syncing}
-                handleSync={handleSync} setFilter={setFilter}
-                handleAsk={handleAsk} setShowTrashConfirm={setShowTrashConfirm}
-                handleSignIn={handleSignIn} setShowDemo={setShowDemo}
-                handleSignOut={handleSignOut}
-              />
-            </div>
-          </div>
-
-          {/* ── MOBILE LAYOUT (<xl) — tab based ── */}
-          <div className="mobile-panel">
-            {mobileTab === "inbox" && (
-              <EmailList
-                filtered={filtered} filter={filter} setFilter={setFilter}
-                loggedIn={loggedIn} lowCount={lowCount} trashing={trashing}
-                setShowTrashConfirm={setShowTrashConfirm} selected={selected}
-                setSelected={setSelected} handleTrashSingle={handleTrashSingle}
-                mobile
-              />
-            )}
-            {mobileTab === "ai" && (
-              <AIPanel
-                loggedIn={loggedIn} loading={loading} aiOut={aiOut}
-                query={query} setQuery={setQuery} handleAsk={handleAsk}
-                handleSignIn={handleSignIn} mobile
-              />
-            )}
-            {mobileTab === "actions" && (
-              <div className="space-y-4">
-                <QuickActions
-                  loggedIn={loggedIn} syncing={syncing}
-                  handleSync={handleSync} setFilter={setFilter}
-                  handleAsk={handleAsk} setShowTrashConfirm={setShowTrashConfirm}
-                  handleSignIn={handleSignIn} setShowDemo={setShowDemo}
-                  handleSignOut={handleSignOut} mobile
-                  setMobileTab={setMobileTab}
-                />
-                {/* Account info on mobile */}
-                {loggedIn && (
-                  <div className="glass-card rounded-2xl p-4">
-                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">Account</h3>
-                    <p className="text-sm text-slate-300 mb-3 truncate">{userEmail}</p>
-                    <button onClick={handleSignOut} className="w-full text-sm text-red-400 border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 px-4 py-2.5 rounded-xl transition-all active:scale-95">
-                      Sign Out
-                    </button>
-                  </div>
-                )}
-                {!loggedIn && (
-                  <div className="glass-card rounded-2xl p-4">
-                    <button onClick={handleSignIn} className="glow-btn w-full text-white text-sm font-semibold px-4 py-3 rounded-xl flex items-center justify-center gap-2">
-                      Sign In with Google
-                    </button>
-                    <button onClick={()=>setShowDemo(true)} className="w-full mt-2 text-sm text-slate-300 border border-white/10 px-4 py-2.5 rounded-xl transition-all active:scale-95">
-                      Request Demo
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
 
-      {/* ── Mobile Bottom Navigation ── */}
+      {/* Mobile Bottom Nav */}
       <nav className="bottom-nav xl:hidden">
-        <div className="flex">
+        <div style={{ display: "flex" }}>
           {[
-            { id:"inbox",   icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>, label:"Inbox",   badge: stats.high > 0 ? stats.high : null },
-            { id:"ai",      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, label:"Ask AI",  badge: null },
-            { id:"actions", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>, label:"Actions", badge: null },
+            { id: "inbox",   label: "Inbox",   badge: stats.high || null, icon: <InboxIcon /> },
+            { id: "ai",      label: "Ask AI",  badge: null,               icon: <ChatIcon /> },
+            { id: "actions", label: "Actions", badge: null,               icon: <CogIcon /> },
           ].map(tab => (
-            <button key={tab.id} onClick={()=>setMobileTab(tab.id)} className={`bottom-nav-btn ${mobileTab===tab.id?"active":""}`}>
-              <div className="relative">
+            <button key={tab.id} onClick={() => setMobileTab(tab.id)} className={`bnav-btn ${mobileTab === tab.id ? "on" : ""}`}>
+              <div style={{ position: "relative" }}>
                 {tab.icon}
-                {tab.badge && <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 rounded-full text-[9px] font-bold text-white flex items-center justify-center">{tab.badge}</span>}
+                {tab.badge && <span style={{ position: "absolute", top: -6, right: -6, width: 16, height: 16, background: "#ef4444", borderRadius: "50%", fontSize: 9, fontWeight: 700, color: "white", display: "flex", alignItems: "center", justifyContent: "center" }}>{tab.badge}</span>}
               </div>
-              <span className="text-[10px] font-medium">{tab.label}</span>
+              <span>{tab.label}</span>
             </button>
           ))}
         </div>
@@ -460,64 +500,133 @@ export default function SmartInbox() {
   );
 }
 
-// ── Email List Component ──────────────────────────────────────────────────────
-function EmailList({ filtered, filter, setFilter, loggedIn, lowCount, trashing, setShowTrashConfirm, selected, setSelected, handleTrashSingle, mobile }) {
+// ── Email List ────────────────────────────────────────────────────────────────
+
+function EmailList({ filtered, filter, setFilter, loggedIn, lowCount, trashing, setShowTrashConfirm, selected, setSelected, handleTrashSingle, handleFeedback, mobile }) {
   return (
-    <div className="glass-card rounded-2xl overflow-hidden">
-      <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-white/[0.06]">
-        <div className="flex items-center justify-between mb-2 sm:mb-0">
-          <div className="flex items-center gap-2">
-            <h2 className="font-semibold text-sm">Inbox</h2>
-            {!loggedIn && <span className="text-[10px] text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded-full px-2 py-0.5">Sample</span>}
-            <span className="text-[10px] text-slate-500">{filtered.length} msgs</span>
+    <div className="card" style={{ overflow: "hidden" }}>
+      {/* Header */}
+      <div style={{ padding: "14px 18px", borderBottom: "1px solid #f1f5f9" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <h2 style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 800, fontSize: 14, color: "#0f172a", margin: 0 }}>Inbox</h2>
+            {!loggedIn && <span style={{ fontSize: 10, fontWeight: 700, color: "#c2410c", background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 100, padding: "2px 8px" }}>DEMO</span>}
+            <span style={{ fontSize: 12, color: "#94a3b8" }}>{filtered.length} emails</span>
           </div>
           {loggedIn && lowCount > 0 && (
-            <button onClick={()=>setShowTrashConfirm(true)} disabled={trashing}
-              className="flex items-center gap-1 text-[11px] font-medium text-red-400 border border-red-500/20 bg-red-500/10 rounded-full px-2.5 py-1 transition-all active:bg-red-500/20">
-              {trashing ? <svg className="spin" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg> : "🗑"}
-              {trashing ? "..." : `LOW (${lowCount})`}
+            <button onClick={() => setShowTrashConfirm(true)} disabled={trashing} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "#ef4444", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 100, padding: "5px 12px", cursor: "pointer" }}>
+              {trashing ? <SpinIcon size={10} /> : "🗑️"} {trashing ? "Trashing..." : `Trash LOW (${lowCount})`}
             </button>
           )}
         </div>
-        <div className="flex items-center gap-1.5 mt-2 sm:mt-2 overflow-x-auto scrollbar-hide">
-          {["ALL","HIGH","MEDIUM","LOW"].map(f => (
-            <button key={f} onClick={()=>setFilter(f)} className={`f-btn flex-shrink-0 ${filter===f?"act":""}`}>{f}</button>
+        <div style={{ display: "flex", gap: 6, overflowX: "auto" }} className="scrollbar-hide">
+          {[["ALL","All"],["HIGH","🔴 Urgent"],["MEDIUM","🟡 Medium"],["LOW","⚪ Low"]].map(([val, label]) => (
+            <button key={val} onClick={() => setFilter(val)} className={`filter-pill ${filter === val ? "on" : ""}`} style={{ flexShrink: 0 }}>{label}</button>
           ))}
         </div>
       </div>
-      <div className="divide-y divide-white/[0.04] overflow-y-auto scrollbar-hide" style={{maxHeight: mobile ? "calc(100vh - 320px)" : "560px"}}>
-        {filtered.map((email,idx) => {
-          const initials = ((s) => { const w=(s||"").trim().split(/\s+/); return ((w[0]?.[0]||"")+(w[1]?.[0]||w[0]?.[1]||"")).toUpperCase(); })(email.sender);
-          const color    = ["#f87171","#a78bfa","#34d399","#fbbf24","#60a5fa","#fb923c","#e879f9","#2dd4bf"][(email.sender?.charCodeAt(0)||0)%8];
-          const dl       = (() => {
-            if (!email.deadline) return null;
-            try { const d=new Date(email.deadline); if(isNaN(d)||d.getFullYear()>2030)return null; const h=(d-Date.now())/36e5; if(h<0)return"Overdue"; if(h<24)return`Today ${d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`; if(h<48)return`Tomorrow`; return d.toLocaleDateString([],{month:"short",day:"numeric"}); } catch{return null;}
-          })();
-          const isSel    = selected?.id===email.id;
+
+      {/* List */}
+      <div style={{ overflowY: "auto", maxHeight: mobile ? "calc(100vh - 350px)" : "580px" }} className="scrollbar-hide">
+        {filtered.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "48px 16px" }}>
+            <div style={{ fontSize: 36, marginBottom: 10 }}>🎉</div>
+            <p style={{ fontWeight: 700, color: "#334155", marginBottom: 4 }}>All clear!</p>
+            <p style={{ fontSize: 13, color: "#94a3b8" }}>No emails in this category.</p>
+          </div>
+        ) : filtered.map((email, idx) => {
+          const av     = getAvatarStyle(email.sender);
+          const dl     = formatDL(email.deadline);
+          // Use gmail_message_id for real emails, numeric id for mock emails
+          const emailKey = email.gmail_message_id || String(email.id ?? idx);
+          const selKey   = selected?.gmail_message_id || (selected?.id != null ? String(selected.id) : null);
+          const isSel    = !!(selKey && emailKey === selKey);
+          const p        = email.priority || "LOW";
+          const lborder = p === "HIGH" ? "#ef4444" : p === "MEDIUM" ? "#f59e0b" : "#e2e8f0";
+          const scoreColor = email.importance_score >= 70 ? "#ef4444" : email.importance_score >= 45 ? "#f59e0b" : "#94a3b8";
+          const pbadge = p === "HIGH"
+            ? { bg: "#fef2f2", text: "#ef4444", ring: "#fecaca", label: "🔴 Urgent" }
+            : p === "MEDIUM"
+            ? { bg: "#fffbeb", text: "#d97706", ring: "#fde68a", label: "🟡 Medium" }
+            : { bg: "#f8fafc", text: "#64748b", ring: "#e2e8f0", label: "⚪ Low" };
+
           return (
-            <div key={email.id||idx} onClick={()=>setSelected(isSel?null:email)} className={`email-card px-4 sm:px-5 py-3.5 sm:py-4 ${isSel?"sel":""}`}>
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5" style={{backgroundColor:color+"22",color,border:`1px solid ${color}33`}}>{initials}</div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2 mb-0.5">
-                    <span className="font-semibold text-sm leading-snug line-clamp-1">{email.subject}</span>
-                    <div className="flex-shrink-0 mt-0.5">
-                      {(() => { const s={HIGH:"bg-red-500/20 text-red-400 border-red-500/30",MEDIUM:"bg-yellow-500/20 text-yellow-400 border-yellow-500/30",LOW:"bg-slate-500/20 text-slate-400 border-slate-500/30"}; return <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full tracking-wider border ${s[email.priority]||s.LOW}`}>{email.priority||"LOW"}</span>; })()}
-                    </div>
+            <div key={emailKey} onClick={() => setSelected(isSel ? null : email)}
+              style={{ borderLeft: `3px solid ${isSel ? "#7c3aed" : lborder}`, padding: "14px 16px", cursor: "pointer", background: isSel ? "#faf9ff" : "white", borderBottom: "1px solid #f8fafc", transition: "all .15s ease" }}
+              onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = "#faf9ff"; }}
+              onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = "white"; }}
+            >
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                {/* Avatar */}
+                <div style={{ width: 36, height: 36, borderRadius: "50%", background: av.bg, color: av.text, fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {getInitials(email.sender)}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {/* Subject + badge row */}
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 2 }}>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: "#0f172a", lineHeight: 1.4, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" }}>
+                      {email.subject || email.summary?.slice(0, 80) || "(no subject)"}
+                    </span>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 9px", borderRadius: 100, background: pbadge.bg, color: pbadge.text, border: `1px solid ${pbadge.ring}`, flexShrink: 0, whiteSpace: "nowrap" }}>{pbadge.label}</span>
                   </div>
-                  <p className="text-xs text-slate-400 mb-0.5">{email.sender}</p>
-                  <p className="text-xs text-slate-500 line-clamp-1">{email.summary}</p>
+                  <p style={{ fontSize: 12, color: "#64748b", marginBottom: 2 }}>{email.sender}</p>
+                  <p style={{ fontSize: 12, color: "#94a3b8", marginBottom: 8, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" }}>{email.summary}</p>
+
+                  {/* Score bar */}
                   {email.importance_score != null && (
-                    <div className="mt-2 flex items-center gap-2">
-                      <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full" style={{width:`${email.importance_score}%`,background:email.importance_score>=70?"#f87171":email.importance_score>=45?"#fbbf24":"#94a3b8"}}/>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: dl ? 6 : 0 }}>
+                      <div style={{ flex: 1, height: 4, background: "#f1f5f9", borderRadius: 100, overflow: "hidden" }}>
+                        <div style={{ width: `${Math.min(email.importance_score, 100)}%`, height: "100%", background: scoreColor, borderRadius: 100, transition: "width .3s ease" }} />
                       </div>
-                      <span className="text-[10px] text-slate-600">{Math.round(email.importance_score)}</span>
+                      <span style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, minWidth: 36 }}>{Math.round(email.importance_score)}/100</span>
                     </div>
                   )}
-                  {dl && <div className="mt-1.5"><span className="text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-full px-2 py-0.5 font-medium">⏰ {dl}</span></div>}
-                  {loggedIn && (email.priority === "LOW" || email.priority === "MEDIUM") && (
-                    <button className="trash-btn" onClick={(ev)=>handleTrashSingle(email,ev)}>🗑 Trash</button>
+
+                  {/* Deadline chip */}
+                  {dl && (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, color: "#ef4444", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 100, padding: "2px 8px", marginBottom: loggedIn ? 4 : 0 }}>⏰ {dl}</span>
+                  )}
+
+                  {/* Trash button */}
+                  {loggedIn && p !== "HIGH" && (
+                    <button onClick={ev => handleTrashSingle(email, ev)} style={{ display: "block", marginTop: 6, fontSize: 11, fontWeight: 600, color: "#f87171", background: "transparent", border: "1px solid #fecaca", borderRadius: 100, padding: "3px 10px", cursor: "pointer", transition: "all .15s" }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "#fef2f2"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                    >🗑️ Trash</button>
+                  )}
+
+                  {/* Feedback buttons — shown when card is selected */}
+                  {isSel && loggedIn && email.gmail_message_id && (
+                    <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #f1f5f9" }}>
+                      <p style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Correct this priority →</p>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {[
+                          { val: "HIGH",   label: "🔴 Urgent",  bg: "#fef2f2", color: "#ef4444", border: "#fecaca" },
+                          { val: "MEDIUM", label: "🟡 Medium",  bg: "#fffbeb", color: "#d97706", border: "#fde68a" },
+                          { val: "LOW",    label: "⚪ Low",      bg: "#f8fafc", color: "#64748b", border: "#e2e8f0" },
+                        ].map(opt => (
+                          <button
+                            key={opt.val}
+                            onClick={ev => { ev.stopPropagation(); handleFeedback(email, opt.val); }}
+                            style={{
+                              fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 100,
+                              background: p === opt.val ? opt.bg : "white",
+                              color: p === opt.val ? opt.color : "#94a3b8",
+                              border: `1.5px solid ${p === opt.val ? opt.border : "#e2e8f0"}`,
+                              cursor: p === opt.val ? "default" : "pointer",
+                              opacity: p === opt.val ? 1 : 0.7,
+                              transition: "all .15s",
+                            }}
+                            onMouseEnter={e => { if (p !== opt.val) { e.currentTarget.style.background = opt.bg; e.currentTarget.style.color = opt.color; e.currentTarget.style.borderColor = opt.border; e.currentTarget.style.opacity = "1"; } }}
+                            onMouseLeave={e => { if (p !== opt.val) { e.currentTarget.style.background = "white"; e.currentTarget.style.color = "#94a3b8"; e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.opacity = "0.7"; } }}
+                            disabled={p === opt.val}
+                            title={p === opt.val ? "Current priority" : `Mark as ${opt.val}`}
+                          >
+                            {opt.label} {p === opt.val && "✓"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -529,65 +638,69 @@ function EmailList({ filtered, filter, setFilter, loggedIn, lowCount, trashing, 
   );
 }
 
-// ── AI Panel Component ────────────────────────────────────────────────────────
-function AIPanel({ loggedIn, loading, aiOut, query, setQuery, handleAsk, handleSignIn, mobile }) {
-  const renderAI = (text) => text.split("\n").map((line,i) => {
-    const parts = line.split(/\*\*(.*?)\*\*/g);
-    return <p key={i} className={`${line===""?"mt-2":"leading-relaxed"} text-slate-300 text-sm`}>{parts.map((p,j) => j%2===1 ? <span key={j} className="text-white font-semibold">{p}</span> : p)}</p>;
-  });
+// ── AI Panel ──────────────────────────────────────────────────────────────────
+
+function AIPanel({ loggedIn, loading, aiOut, query, setQuery, handleAsk, renderAI, handleSignIn, mobile }) {
   return (
-    <div className="glass-card rounded-2xl overflow-hidden flex flex-col" style={{minHeight: mobile ? "calc(100vh - 260px)" : "400px"}}>
-      <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-white/[0.06]">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-xs">✦</div>
-          <div>
-            <h2 className="font-semibold text-sm">Ask Your Inbox</h2>
-            <p className="text-[10px] text-slate-500">{loggedIn?"Connected to Gmail":"Demo responses"}</p>
-          </div>
-          <div className="ml-auto flex items-center gap-1">
-            <span className={`dp ${loggedIn?"dp-green":"dp-yellow"}`}></span>
-            <span className="text-[10px] text-slate-500">{loggedIn?"Live":"Demo"}</span>
-          </div>
+    <div className="card" style={{ overflow: "hidden", display: "flex", flexDirection: "column", minHeight: mobile ? "calc(100vh - 290px)" : 360 }}>
+      {/* Header */}
+      <div style={{ padding: "14px 18px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg,#7c3aed,#4f46e5)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 13, flexShrink: 0 }}>✦</div>
+        <div>
+          <h2 style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 800, fontSize: 14, color: "#0f172a", margin: 0 }}>Ask your inbox</h2>
+          <p style={{ fontSize: 11, color: "#94a3b8", margin: 0 }}>{loggedIn ? "Connected to your Gmail" : "Demo — sign in for real answers"}</p>
+        </div>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
+          <span className={`dot ${loggedIn ? "dot-green" : "dot-yellow"}`}></span>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8" }}>{loggedIn ? "Live" : "Demo"}</span>
         </div>
       </div>
-      <div className="flex-1 p-4 sm:p-5 overflow-y-auto scrollbar-hide">
+
+      {/* Answer area */}
+      <div style={{ flex: 1, padding: "16px 18px", overflowY: "auto" }} className="scrollbar-hide">
         {loading ? (
-          <div className="space-y-2.5">
-            {[100,80,90].map((w,i)=><div key={i} className="h-3 rounded-full shimmer" style={{width:`${w}%`}}></div>)}
-            <div className="flex items-center gap-2 mt-4">
-              {[0,150,300].map(d=><div key={d} className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" style={{animationDelay:`${d}ms`}}></div>)}
-              <span className="text-xs text-slate-500 ml-1">Thinking...</span>
+          <div>
+            {[100, 80, 90].map((w, i) => <div key={i} style={{ height: 12, background: "#f1f5f9", borderRadius: 100, width: `${w}%`, marginBottom: 10, animation: "shimmer 1.5s infinite" }} />)}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 16 }}>
+              {[0, 150, 300].map(d => <div key={d} style={{ width: 8, height: 8, background: "#a78bfa", borderRadius: "50%", animation: `bounce .7s ${d}ms infinite alternate` }} />)}
+              <span style={{ fontSize: 12, color: "#94a3b8", marginLeft: 4 }}>Thinking...</span>
             </div>
           </div>
         ) : (
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-5 h-5 rounded bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-[9px]">✦</div>
-              <span className="text-xs text-violet-400 font-medium">AI Response</span>
+            <p style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>AI Response</p>
+            <div style={{ background: "#f8f7ff", borderRadius: 12, padding: "14px 16px", border: "1px solid #ede9fe" }}>
+              {renderAI(aiOut)}
             </div>
-            <div className="bg-white/[0.03] rounded-xl p-3 sm:p-4 border border-white/[0.06]">{renderAI(aiOut)}</div>
-            {!loggedIn && <p className="text-[10px] text-slate-600 mt-3 text-center"><button onClick={handleSignIn} className="text-violet-400">Sign in</button> to query your real inbox</p>}
+            {!loggedIn && (
+              <p style={{ fontSize: 12, color: "#94a3b8", textAlign: "center", marginTop: 12 }}>
+                <button onClick={handleSignIn} style={{ color: "#7c3aed", fontWeight: 700, background: "none", border: "none", cursor: "pointer" }}>Sign in with Google</button> to search your real inbox
+              </p>
+            )}
           </div>
         )}
       </div>
-      <div className="p-3 sm:p-4 border-t border-white/[0.06]">
-        <div className="flex gap-2">
+
+      {/* Input */}
+      <div style={{ padding: "12px 16px", borderTop: "1px solid #f1f5f9" }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
           <input
             type="text"
-            className="ai-input flex-1 text-sm px-3 sm:px-4 py-2.5 rounded-xl"
+            className="ai-input"
             placeholder="What deadlines do I have?"
             value={query}
-            onChange={e=>setQuery(e.target.value)}
-            onKeyDown={e=>e.key==="Enter"&&handleAsk()}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleAsk()}
+            style={{ flex: 1 }}
           />
-          <button onClick={()=>handleAsk()} disabled={loading} className="glow-btn px-3 sm:px-4 py-2.5 rounded-xl text-sm font-semibold text-white flex items-center gap-1.5 flex-shrink-0">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            <span className="hidden sm:inline">Ask</span>
+          <button onClick={() => handleAsk()} disabled={loading} className="btn-primary" style={{ flexShrink: 0, paddingLeft: 16, paddingRight: 16 }}>
+            <SendIcon />
+            <span className="hide-xs">Ask</span>
           </button>
         </div>
-        <div className="flex gap-2 mt-2 flex-wrap">
-          {["Deadlines?","Urgent emails?","Summarize inbox"].map(s=>(
-            <button key={s} onClick={()=>handleAsk(s)} className="text-[10px] text-slate-500 bg-white/[0.03] border border-white/[0.06] rounded-full px-2.5 py-1.5 transition-all active:bg-white/[0.06]">{s}</button>
+        <div style={{ display: "flex", gap: 6, overflowX: "auto" }} className="scrollbar-hide">
+          {["What deadlines?", "Show urgent", "Summarize inbox"].map(s => (
+            <button key={s} onClick={() => handleAsk(s)} style={{ flexShrink: 0, background: "#f5f3ff", color: "#7c3aed", border: "1px solid #ddd6fe", borderRadius: 100, fontSize: 11, fontWeight: 600, padding: "5px 12px", cursor: "pointer", whiteSpace: "nowrap" }}>{s}</button>
           ))}
         </div>
       </div>
@@ -595,24 +708,146 @@ function AIPanel({ loggedIn, loading, aiOut, query, setQuery, handleAsk, handleS
   );
 }
 
-// ── Quick Actions Component ───────────────────────────────────────────────────
+// ── Quick Actions ─────────────────────────────────────────────────────────────
+
 function QuickActions({ loggedIn, syncing, handleSync, setFilter, handleAsk, setShowTrashConfirm, handleSignIn, setShowDemo, handleSignOut, mobile, setMobileTab }) {
+  const actions = [
+    { icon: loggedIn ? "⚡" : "📬", label: loggedIn ? "Sync Gmail" : "Request Demo", sub: loggedIn ? "Pull latest emails" : "Get live access",        action: loggedIn ? handleSync : () => setShowDemo(true) },
+    { icon: "🔴",                    label: "View Urgent",                             sub: "Filter to HIGH priority",                                    action: () => { setFilter("HIGH"); if (mobile && setMobileTab) setMobileTab("inbox"); } },
+    { icon: "⏰",                    label: "My Deadlines",                            sub: "Ask AI for upcoming due dates",                               action: () => handleAsk("What deadlines do I have?") },
+    { icon: loggedIn ? "🗑️" : "🔑", label: loggedIn ? "Trash LOW emails" : "Sign In", sub: loggedIn ? "One-click inbox cleanup" : "Connect your Gmail", action: loggedIn ? () => setShowTrashConfirm(true) : handleSignIn },
+  ];
   return (
-    <div className="glass-card rounded-2xl p-4">
-      <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">Quick Actions</h3>
-      <div className="grid grid-cols-2 gap-2">
-        {[
-          { label: loggedIn?"Sync Gmail":"Request Demo", icon:"⚡", action: loggedIn ? handleSync : ()=>setShowDemo(true) },
-          { label: "High Priority",  icon:"🔴", action: () => { setFilter("HIGH"); if(mobile && setMobileTab) setMobileTab("inbox"); } },
-          { label: "Ask Deadlines",  icon:"⏰", action: () => handleAsk("What deadlines do I have?") },
-          { label: loggedIn?"Trash LOW":"Sign In", icon: loggedIn?"🗑":"🔑", action: loggedIn ? ()=>setShowTrashConfirm(true) : handleSignIn },
-        ].map(a=>(
-          <button key={a.label} onClick={a.action}
-            className="text-xs text-slate-300 bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.07] rounded-xl px-3 py-3 flex items-center gap-2 transition-all font-medium active:scale-95">
-            <span>{a.icon}</span>{a.label}
+    <div className="card" style={{ padding: 18 }}>
+      <p style={{ fontSize: 11, fontWeight: 800, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>Quick Actions</p>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        {actions.map(a => (
+          <button key={a.label} onClick={a.action} style={{ textAlign: "left", display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px", borderRadius: 12, border: "1.5px solid #e2e8f0", background: "white", cursor: "pointer", transition: "all .15s" }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "#c4b5fd"; e.currentTarget.style.background = "#faf9ff"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.background = "white"; }}
+          >
+            <span style={{ fontSize: 18, flexShrink: 0 }}>{a.icon}</span>
+            <div>
+              <p style={{ fontSize: 12, fontWeight: 700, color: "#1e293b", marginBottom: 2 }}>{a.label}</p>
+              <p style={{ fontSize: 11, color: "#94a3b8" }}>{a.sub}</p>
+            </div>
           </button>
         ))}
       </div>
     </div>
   );
 }
+
+// ── Icons ─────────────────────────────────────────────────────────────────────
+
+const GoogleIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+  </svg>
+);
+const SyncIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+  </svg>
+);
+const SpinIcon = ({ size = 13 }) => (
+  <svg className="spin" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <path d="M21 12a9 9 0 11-6.219-8.56"/>
+  </svg>
+);
+const SendIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+  </svg>
+);
+const InboxIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+  </svg>
+);
+const ChatIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </svg>
+);
+const CogIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/>
+  </svg>
+);
+
+// ── CSS ───────────────────────────────────────────────────────────────────────
+
+const styles = {};
+
+const CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Inter:wght@400;500;600;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #f8f7ff; }
+
+  .container { max-width: 1400px; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
+  @media(min-width:640px){ .container { padding-left: 24px; padding-right: 24px; } }
+
+  .card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media(min-width:768px){ .stats-grid { grid-template-columns: repeat(4,1fr); } }
+
+  .pipeline-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media(min-width:640px){ .pipeline-grid { grid-template-columns: repeat(4,1fr); } }
+
+  .desktop-grid { display: grid; grid-template-columns: 1fr 380px; gap: 20px; }
+
+  .desktop-only { display: none; }
+  .mobile-panel { display: block; }
+  @media(min-width:1280px){ .desktop-only { display: grid; } .mobile-panel { display: none; } .bottom-nav { display: none !important; } }
+
+  .safe-pb { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+  @media(min-width:1280px){ .safe-pb { padding-bottom: 32px; } }
+
+  .hide-xs { display: none; }
+  @media(min-width:400px){ .hide-xs { display: inline; } }
+  .hide-sm { display: none; }
+  @media(min-width:640px){ .hide-sm { display: inline-flex; } }
+
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
+  .dot-green { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,.5); animation: pulse 2s infinite; }
+  .dot-yellow { background: #f59e0b; }
+  .dot-red { background: #ef4444; }
+
+  .spin { animation: spin 1s linear infinite; }
+
+  .filter-pill { font-size: 12px; padding: 5px 14px; border-radius: 100px; border: 1.5px solid #e2e8f0; background: white; cursor: pointer; color: #64748b; font-weight: 600; transition: all .15s; }
+  .filter-pill:hover { border-color: #c4b5fd; color: #7c3aed; }
+  .filter-pill.on { background: #7c3aed; color: white; border-color: #7c3aed; }
+
+  .ai-input { background: #f8f7ff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 11px 14px; font-size: 14px; font-family: inherit; outline: none; transition: all .2s; color: #0f172a; width: 100%; }
+  .ai-input:focus { border-color: #7c3aed; background: white; box-shadow: 0 0 0 3px rgba(124,58,237,.08); }
+  .ai-input::placeholder { color: #94a3b8; }
+
+  .btn-primary { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 10px; border: none; background: linear-gradient(135deg,#7c3aed,#4f46e5); color: white; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .2s; white-space: nowrap; }
+  .btn-primary:hover { box-shadow: 0 4px 16px rgba(124,58,237,.35); transform: translateY(-1px); }
+  .btn-primary:active { transform: scale(.97); }
+  .btn-primary:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .btn-ghost { display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; border-radius: 10px; border: 1.5px solid #e2e8f0; background: white; color: #475569; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .15s; }
+  .btn-ghost:hover { border-color: #c4b5fd; color: #7c3aed; background: #faf9ff; }
+
+  .btn-ghost-sm { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 8px; border: 1px solid #fbbf24; background: white; color: #92400e; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .btn-amber-sm { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 8px; border: none; background: #f59e0b; color: white; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
+
+  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 40; background: white; border-top: 1px solid #e2e8f0; padding-bottom: env(safe-area-inset-bottom); }
+  .bnav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 4px; cursor: pointer; border: none; background: transparent; color: #94a3b8; font-size: 10px; font-weight: 600; transition: color .15s; font-family: inherit; -webkit-tap-highlight-color: transparent; }
+  .bnav-btn.on { color: #7c3aed; }
+
+  .toast { position: fixed; bottom: 80px; right: 16px; z-index: 50; background: white; border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; gap: 10px; box-shadow: 0 8px 30px rgba(0,0,0,.12); border: 1.5px solid; max-width: calc(100vw - 32px); }
+  @media(min-width:1280px){ .toast { bottom: 24px; right: 24px; } }
+
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+  @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-5px); } }
+  @keyframes shimmer { 0% { opacity: .4; } 50% { opacity: .8; } 100% { opacity: .4; } }
+`;
