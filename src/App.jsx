@@ -41,36 +41,38 @@ const formatDL = (dl) => {
 // ── Modals ────────────────────────────────────────────────────────────────────
 
 const TrashConfirmModal = ({ lowCount, onConfirm, onClose }) => (
-  <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ background: "rgba(15,23,42,.45)", backdropFilter: "blur(4px)" }}>
-    <div style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 20, maxWidth: 380, width: "100%", padding: 28, boxShadow: "0 20px 60px rgba(0,0,0,.15)", position: "relative" }}>
-      <button onClick={onClose} style={{ position: "absolute", top: 14, right: 14, width: 32, height: 32, borderRadius: 8, border: "1px solid #e2e8f0", background: "white", cursor: "pointer", fontSize: 16, color: "#94a3b8", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-      <div style={{ width: 48, height: 48, borderRadius: 14, background: "#fef2f2", border: "1px solid #fecaca", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, marginBottom: 16 }}>🗑️</div>
+  <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ background: "rgba(15,23,42,.5)", backdropFilter: "blur(4px)" }}>
+    <div className="modal-sheet" style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 20, maxWidth: 400, width: "100%", padding: "24px 24px 28px", boxShadow: "0 20px 60px rgba(0,0,0,.2)", position: "relative" }}>
+      <div className="modal-handle" />
+      <button onClick={onClose} style={{ position: "absolute", top: 14, right: 14, width: 36, height: 36, borderRadius: 8, border: "1px solid #e2e8f0", background: "white", cursor: "pointer", fontSize: 16, color: "#94a3b8", display: "flex", alignItems: "center", justifyContent: "center", touchAction: "manipulation" }}>✕</button>
+      <div style={{ width: 48, height: 48, borderRadius: 14, background: "#fef2f2", border: "1px solid #fecaca", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, marginBottom: 14 }}>🗑️</div>
       <h2 style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 18, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Trash {lowCount} low priority?</h2>
-      <p style={{ fontSize: 14, color: "#64748b", marginBottom: 24, lineHeight: 1.6 }}>These will move to Gmail Trash — recoverable for 30 days.</p>
+      <p style={{ fontSize: 14, color: "#64748b", marginBottom: 22, lineHeight: 1.6 }}>These will move to Gmail Trash — recoverable for 30 days.</p>
       <div style={{ display: "flex", gap: 10 }}>
-        <button onClick={onClose} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "1.5px solid #e2e8f0", background: "white", fontSize: 14, fontWeight: 600, color: "#475569", cursor: "pointer" }}>Cancel</button>
-        <button onClick={onConfirm} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "white", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Move to Trash</button>
+        <button onClick={onClose} style={{ flex: 1, padding: "13px 0", borderRadius: 12, border: "1.5px solid #e2e8f0", background: "white", fontSize: 14, fontWeight: 600, color: "#475569", cursor: "pointer", touchAction: "manipulation" }}>Cancel</button>
+        <button onClick={onConfirm} style={{ flex: 1, padding: "13px 0", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "white", fontSize: 14, fontWeight: 700, cursor: "pointer", touchAction: "manipulation" }}>Move to Trash</button>
       </div>
     </div>
   </div>
 );
 
 const DemoModal = ({ onClose }) => (
-  <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ background: "rgba(15,23,42,.45)", backdropFilter: "blur(4px)" }}>
-    <div style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 20, maxWidth: 420, width: "100%", padding: 28, boxShadow: "0 20px 60px rgba(0,0,0,.15)", position: "relative" }}>
-      <button onClick={onClose} style={{ position: "absolute", top: 14, right: 14, width: 32, height: 32, borderRadius: 8, border: "1px solid #e2e8f0", background: "white", cursor: "pointer", fontSize: 16, color: "#94a3b8", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-      <div style={{ width: 48, height: 48, borderRadius: 14, background: "#f5f3ff", border: "1px solid #ddd6fe", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, marginBottom: 16 }}>📬</div>
+  <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ background: "rgba(15,23,42,.5)", backdropFilter: "blur(4px)" }}>
+    <div className="modal-sheet" style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 20, maxWidth: 440, width: "100%", padding: "24px 24px 28px", boxShadow: "0 20px 60px rgba(0,0,0,.2)", position: "relative" }}>
+      <div className="modal-handle" />
+      <button onClick={onClose} style={{ position: "absolute", top: 14, right: 14, width: 36, height: 36, borderRadius: 8, border: "1px solid #e2e8f0", background: "white", cursor: "pointer", fontSize: 16, color: "#94a3b8", display: "flex", alignItems: "center", justifyContent: "center", touchAction: "manipulation" }}>✕</button>
+      <div style={{ width: 48, height: 48, borderRadius: 14, background: "#f5f3ff", border: "1px solid #ddd6fe", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, marginBottom: 14 }}>📬</div>
       <h2 style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 18, fontWeight: 800, color: "#0f172a", marginBottom: 6 }}>Request Live Demo</h2>
-      <p style={{ fontSize: 13, color: "#64748b", marginBottom: 16, lineHeight: 1.6 }}>Want to try with your real Gmail? I'll add you as an approved tester.</p>
+      <p style={{ fontSize: 14, color: "#64748b", marginBottom: 16, lineHeight: 1.6 }}>Want to try with your real Gmail? I'll add you as an approved tester.</p>
       <div style={{ background: "#f8f7ff", borderRadius: 12, padding: "14px 16px", marginBottom: 18, border: "1px solid #ede9fe" }}>
         {[["🧠","4-model ML pipeline scores every email"],["🔍","Semantic search powered by pgvector"],["⏰","AI extracts deadlines from email text"],["📊","K-Means clusters emails by topic"]].map(([icon, text], i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "#374151", marginBottom: i < 3 ? 8 : 0 }}><span>{icon}</span><span>{text}</span></div>
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: "#374151", marginBottom: i < 3 ? 10 : 0 }}><span>{icon}</span><span>{text}</span></div>
         ))}
       </div>
-      <button onClick={() => { navigator.clipboard.writeText("dhanashreebansode70@gmail.com"); alert("Copied! Send a message to get access."); }} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#7c3aed,#4f46e5)", color: "white", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+      <button onClick={() => { navigator.clipboard.writeText("dhanashreebansode70@gmail.com"); alert("Copied! Send a message to get access."); }} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#7c3aed,#4f46e5)", color: "white", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, touchAction: "manipulation" }}>
         📋 Copy Contact Email
       </button>
-      <p style={{ textAlign: "center", fontSize: 12, color: "#94a3b8", marginTop: 12 }}>
+      <p style={{ textAlign: "center", fontSize: 13, color: "#94a3b8", marginTop: 14 }}>
         Or <a href="https://linkedin.com/in/dhanashree2311" target="_blank" rel="noreferrer" style={{ color: "#7c3aed", fontWeight: 600 }}>DM on LinkedIn ↗</a>
       </p>
     </div>
@@ -342,7 +344,9 @@ export default function SmartInbox() {
               <>
                 <button onClick={() => setShowDemo(true)} className="btn-ghost hide-sm">Request Demo</button>
                 <button onClick={handleSignIn} className="btn-primary">
-                  <GoogleIcon /> Sign In with Google
+                  <GoogleIcon />
+                  <span className="hide-xs">Sign In with Google</span>
+                  <span style={{ display: "inline" }} className="show-xs-only">Sign In</span>
                 </button>
               </>
             ) : (
@@ -350,7 +354,8 @@ export default function SmartInbox() {
                 <span style={{ fontSize: 12, color: "#94a3b8", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} className="hide-sm">{userEmail}</span>
                 <button onClick={handleSync} disabled={syncing} className="btn-primary">
                   {syncing ? <SpinIcon /> : <SyncIcon />}
-                  <span>{syncing ? "Syncing..." : "Sync Gmail"}</span>
+                  <span className="hide-xs">{syncing ? "Syncing..." : "Sync Gmail"}</span>
+                  <span style={{ display: "inline" }} className="show-xs-only">{syncing ? "..." : "Sync"}</span>
                 </button>
                 <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#7c3aed,#4f46e5)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 12, fontWeight: 700, flexShrink: 0, border: "2px solid #ede9fe", cursor: "pointer" }} title={userEmail} onClick={handleSignOut}>
                   {avatarLetters}
@@ -409,7 +414,7 @@ export default function SmartInbox() {
           ].map(s => (
             <div key={s.label} style={{ background: "white", borderRadius: 16, padding: "18px 20px", border: `1px solid ${s.border}` }}>
               <div style={{ fontSize: 22, marginBottom: 10 }}>{s.icon}</div>
-              <div style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 800, fontSize: 30, color: s.accent, lineHeight: 1, marginBottom: 4 }}>{s.value}</div>
+              <div className="stat-num" style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 800, color: s.accent, lineHeight: 1, marginBottom: 4 }}>{s.value}</div>
               <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8" }}>{s.label}</div>
             </div>
           ))}
@@ -527,7 +532,7 @@ function EmailList({ filtered, filter, setFilter, loggedIn, lowCount, trashing, 
       </div>
 
       {/* List */}
-      <div style={{ overflowY: "auto", maxHeight: mobile ? "calc(100vh - 350px)" : "580px" }} className="scrollbar-hide">
+      <div style={{ overflowY: "auto", maxHeight: mobile ? "calc(100svh - 340px)" : "580px" }} className="scrollbar-hide">
         {filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: "48px 16px" }}>
             <div style={{ fontSize: 36, marginBottom: 10 }}>🎉</div>
@@ -552,7 +557,7 @@ function EmailList({ filtered, filter, setFilter, loggedIn, lowCount, trashing, 
 
           return (
             <div key={emailKey} onClick={() => setSelected(isSel ? null : email)}
-              style={{ borderLeft: `3px solid ${isSel ? "#7c3aed" : lborder}`, padding: "14px 16px", cursor: "pointer", background: isSel ? "#faf9ff" : "white", borderBottom: "1px solid #f8fafc", transition: "all .15s ease" }}
+              style={{ borderLeft: `3px solid ${isSel ? "#7c3aed" : lborder}`, padding: "16px", cursor: "pointer", background: isSel ? "#faf9ff" : "white", borderBottom: "1px solid #f8fafc", transition: "background .15s ease", WebkitUserSelect: "none", userSelect: "none", touchAction: "manipulation" }}
               onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = "#faf9ff"; }}
               onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = "white"; }}
             >
@@ -782,15 +787,20 @@ const styles = {};
 
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Inter:wght@400;500;600;700&display=swap');
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #f8f7ff; }
 
+  /* ── Reset ── */
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { background: #f8f7ff; -webkit-text-size-adjust: 100%; }
+
+  /* ── Layout ── */
   .container { max-width: 1400px; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
   @media(min-width:640px){ .container { padding-left: 24px; padding-right: 24px; } }
 
   .card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
 
-  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  /* ── Grids ── */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media(min-width:640px){ .stats-grid { gap: 12px; } }
   @media(min-width:768px){ .stats-grid { grid-template-columns: repeat(4,1fr); } }
 
   .pipeline-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -798,21 +808,32 @@ const CSS = `
 
   .desktop-grid { display: grid; grid-template-columns: 1fr 380px; gap: 20px; }
 
+  /* ── Desktop vs mobile panels ── */
   .desktop-only { display: none; }
   .mobile-panel { display: block; }
-  @media(min-width:1280px){ .desktop-only { display: grid; } .mobile-panel { display: none; } .bottom-nav { display: none !important; } }
+  @media(min-width:1280px){
+    .desktop-only { display: grid; }
+    .mobile-panel { display: none; }
+    .bottom-nav { display: none !important; }
+  }
 
-  .safe-pb { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+  /* ── Safe area padding ── */
+  .safe-pb { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
   @media(min-width:1280px){ .safe-pb { padding-bottom: 32px; } }
 
+  /* ── Show/hide helpers ── */
   .hide-xs { display: none; }
-  @media(min-width:400px){ .hide-xs { display: inline; } }
+  @media(min-width:420px){ .hide-xs { display: inline; } }
+  .show-xs-only { display: inline; }
+  @media(min-width:420px){ .show-xs-only { display: none; } }
   .hide-sm { display: none; }
   @media(min-width:640px){ .hide-sm { display: inline-flex; } }
 
+  /* ── Scrolling ── */
   .scrollbar-hide::-webkit-scrollbar { display: none; }
-  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 
+  /* ── Status dots ── */
   .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
   .dot-green { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,.5); animation: pulse 2s infinite; }
   .dot-yellow { background: #f59e0b; }
@@ -820,31 +841,117 @@ const CSS = `
 
   .spin { animation: spin 1s linear infinite; }
 
-  .filter-pill { font-size: 12px; padding: 5px 14px; border-radius: 100px; border: 1.5px solid #e2e8f0; background: white; cursor: pointer; color: #64748b; font-weight: 600; transition: all .15s; }
-  .filter-pill:hover { border-color: #c4b5fd; color: #7c3aed; }
+  /* ── Filter pills ── */
+  .filter-pill {
+    font-size: 12px; padding: 7px 14px; border-radius: 100px;
+    border: 1.5px solid #e2e8f0; background: white; cursor: pointer;
+    color: #64748b; font-weight: 600; transition: all .15s;
+    min-height: 36px; display: inline-flex; align-items: center;
+    white-space: nowrap; -webkit-user-select: none; user-select: none;
+  }
+  .filter-pill:active { background: #f5f3ff; }
   .filter-pill.on { background: #7c3aed; color: white; border-color: #7c3aed; }
 
-  .ai-input { background: #f8f7ff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 11px 14px; font-size: 14px; font-family: inherit; outline: none; transition: all .2s; color: #0f172a; width: 100%; }
+  /* ── AI input — 16px prevents iOS auto-zoom ── */
+  .ai-input {
+    background: #f8f7ff; border: 1.5px solid #e2e8f0; border-radius: 12px;
+    padding: 12px 14px; font-size: 16px; font-family: inherit;
+    outline: none; transition: all .2s; color: #0f172a; width: 100%;
+  }
+  @media(min-width:640px){ .ai-input { font-size: 14px; } }
   .ai-input:focus { border-color: #7c3aed; background: white; box-shadow: 0 0 0 3px rgba(124,58,237,.08); }
   .ai-input::placeholder { color: #94a3b8; }
 
-  .btn-primary { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 10px; border: none; background: linear-gradient(135deg,#7c3aed,#4f46e5); color: white; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .2s; white-space: nowrap; }
-  .btn-primary:hover { box-shadow: 0 4px 16px rgba(124,58,237,.35); transform: translateY(-1px); }
-  .btn-primary:active { transform: scale(.97); }
-  .btn-primary:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
+  /* ── Buttons ── */
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 16px; min-height: 44px; border-radius: 10px; border: none;
+    background: linear-gradient(135deg,#7c3aed,#4f46e5); color: white;
+    font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
+    transition: all .2s; white-space: nowrap; touch-action: manipulation;
+  }
+  @media(min-width:640px){ .btn-primary { font-size: 13px; padding: 9px 16px; min-height: unset; } }
+  .btn-primary:active { transform: scale(.97); opacity: .9; }
+  .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
 
-  .btn-ghost { display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; border-radius: 10px; border: 1.5px solid #e2e8f0; background: white; color: #475569; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .15s; }
-  .btn-ghost:hover { border-color: #c4b5fd; color: #7c3aed; background: #faf9ff; }
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 14px; min-height: 44px; border-radius: 10px;
+    border: 1.5px solid #e2e8f0; background: white; color: #475569;
+    font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+    transition: all .15s; touch-action: manipulation;
+  }
+  @media(min-width:640px){ .btn-ghost { min-height: unset; padding: 9px 14px; } }
+  .btn-ghost:active { background: #f5f3ff; border-color: #c4b5fd; color: #7c3aed; }
 
-  .btn-ghost-sm { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 8px; border: 1px solid #fbbf24; background: white; color: #92400e; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
-  .btn-amber-sm { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 8px; border: none; background: #f59e0b; color: white; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  .btn-ghost-sm { display: inline-flex; align-items: center; padding: 8px 14px; min-height: 36px; border-radius: 8px; border: 1px solid #fbbf24; background: white; color: #92400e; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .btn-amber-sm { display: inline-flex; align-items: center; padding: 8px 14px; min-height: 36px; border-radius: 8px; border: none; background: #f59e0b; color: white; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
 
-  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 40; background: white; border-top: 1px solid #e2e8f0; padding-bottom: env(safe-area-inset-bottom); }
-  .bnav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 4px; cursor: pointer; border: none; background: transparent; color: #94a3b8; font-size: 10px; font-weight: 600; transition: color .15s; font-family: inherit; -webkit-tap-highlight-color: transparent; }
+  /* ── Bottom nav ── */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
+    background: white; border-top: 1px solid #e2e8f0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .bnav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    gap: 4px; padding: 10px 4px; min-height: 56px; cursor: pointer;
+    border: none; background: transparent; color: #94a3b8;
+    font-size: 10px; font-weight: 600; transition: color .15s;
+    font-family: inherit; touch-action: manipulation;
+  }
   .bnav-btn.on { color: #7c3aed; }
+  .bnav-btn:active { opacity: .7; }
 
-  .toast { position: fixed; bottom: 80px; right: 16px; z-index: 50; background: white; border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; gap: 10px; box-shadow: 0 8px 30px rgba(0,0,0,.12); border: 1.5px solid; max-width: calc(100vw - 32px); }
-  @media(min-width:1280px){ .toast { bottom: 24px; right: 24px; } }
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    z-index: 50; background: white; border-radius: 12px; padding: 12px 16px;
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.15); border: 1.5px solid;
+    width: calc(100vw - 32px); max-width: 380px;
+  }
+  @media(min-width:1280px){ .toast { bottom: 24px; left: unset; right: 24px; transform: none; width: auto; } }
+
+  /* ── Mobile modal bottom sheet handle ── */
+  .modal-handle {
+    width: 40px; height: 4px; background: #e2e8f0;
+    border-radius: 100px; margin: 0 auto 16px;
+  }
+  @media(min-width:640px){ .modal-handle { display: none; } }
+
+  /* ── Mobile modal — slides from bottom ── */
+  @media(max-width:639px){
+    .modal-sheet {
+      border-radius: 20px 20px 0 0 !important;
+      max-height: 92vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding-top: 16px !important;
+    }
+  }
+
+  /* ── Stat card numbers — scale down on tiny screens ── */
+  .stat-num { font-size: 28px; }
+  @media(min-width:360px){ .stat-num { font-size: 30px; } }
+
+  /* ── Suggest chips ── */
+  .suggest-chip {
+    background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe;
+    border-radius: 100px; font-size: 12px; font-weight: 600;
+    padding: 7px 14px; cursor: pointer; transition: all .15s;
+    white-space: nowrap; min-height: 36px; display: inline-flex;
+    align-items: center; touch-action: manipulation;
+  }
+  .suggest-chip:active { background: #ede9fe; }
+
+  /* ── Action buttons ── */
+  .action-btn {
+    width: 100%; text-align: left; display: flex; align-items: flex-start;
+    gap: 10px; padding: 14px; min-height: 60px; border-radius: 12px;
+    border: 1.5px solid #e2e8f0; background: white; cursor: pointer;
+    font-size: 13px; font-weight: 500; color: #374151;
+    transition: all .15s; touch-action: manipulation;
+  }
+  .action-btn:active { border-color: #c4b5fd; background: #faf9ff; color: #7c3aed; }
 
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
