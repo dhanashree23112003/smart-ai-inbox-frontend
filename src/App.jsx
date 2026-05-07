@@ -316,10 +316,10 @@ export default function SmartInbox() {
 
       {/* Demo banner */}
       {!loggedIn && (
-        <div style={{ background: "#fffbeb", borderBottom: "1px solid #fde68a", padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 13, color: "#92400e", fontWeight: 500 }}>✨ Demo mode — you're viewing sample emails. Sign in to use your real Gmail.</span>
-          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-            <button onClick={handleSignIn} className="btn-ghost-sm">Sign In with Google</button>
+        <div style={{ background: "#fffbeb", borderBottom: "1px solid #fde68a", padding: "8px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "nowrap" }}>
+          <span style={{ fontSize: 12, color: "#92400e", fontWeight: 500, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>✨ Demo mode — viewing sample emails.</span>
+          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+            <button onClick={handleSignIn} className="btn-ghost-sm">Sign In</button>
             <button onClick={() => setShowDemo(true)} className="btn-amber-sm">Request Access →</button>
           </div>
         </div>
@@ -329,10 +329,10 @@ export default function SmartInbox() {
       <nav style={{ background: "white", borderBottom: "1px solid #e2e8f0", position: "sticky", top: 0, zIndex: 40, boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
         <div className="container" style={{ height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           {/* Logo */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
             <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#7c3aed,#4f46e5)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 14, fontWeight: 700, flexShrink: 0 }}>✦</div>
-            <span style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 800, fontSize: 16, color: "#0f172a" }}>Smart AI Inbox</span>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 100, padding: "4px 10px" }} className="hide-xs">
+            <span style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 800, fontSize: 16, color: "#0f172a", whiteSpace: "nowrap" }}>Smart AI Inbox</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 100, padding: "4px 10px" }} className="hide-sm">
               <span className={`dot ${statusGood ? "dot-green" : status === "DEMO" ? "dot-yellow" : "dot-red"}`}></span>
               <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b" }}>{status}</span>
             </div>
