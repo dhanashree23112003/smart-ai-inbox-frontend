@@ -332,7 +332,7 @@ export default function SmartInbox() {
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
             <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#7c3aed,#4f46e5)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 14, fontWeight: 700, flexShrink: 0 }}>✦</div>
             <span style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 800, fontSize: 16, color: "#0f172a", whiteSpace: "nowrap" }}>Smart AI Inbox</span>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 100, padding: "4px 10px" }} className="hide-sm">
+            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 100, padding: "4px 10px" }} className="hide-md">
               <span className={`dot ${statusGood ? "dot-green" : status === "DEMO" ? "dot-yellow" : "dot-red"}`}></span>
               <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b" }}>{status}</span>
             </div>
@@ -342,11 +342,10 @@ export default function SmartInbox() {
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {!loggedIn ? (
               <>
-                <button onClick={() => setShowDemo(true)} className="btn-ghost hide-sm">Request Demo</button>
+                <button onClick={() => setShowDemo(true)} className="btn-ghost hide-md" style={{ whiteSpace: "nowrap" }}>Request Demo</button>
                 <button onClick={handleSignIn} className="btn-primary">
                   <GoogleIcon />
-                  <span className="hide-xs">Sign In with Google</span>
-                  <span style={{ display: "inline" }} className="show-xs-only">Sign In</span>
+                  <span style={{ whiteSpace: "nowrap" }}>Sign In</span>
                 </button>
               </>
             ) : (
@@ -828,6 +827,8 @@ const CSS = `
   @media(min-width:420px){ .show-xs-only { display: none; } }
   .hide-sm { display: none; }
   @media(min-width:640px){ .hide-sm { display: inline-flex; } }
+  .hide-md { display: none; }
+  @media(min-width:768px){ .hide-md { display: inline-flex; } }
 
   /* ── Scrolling ── */
   .scrollbar-hide::-webkit-scrollbar { display: none; }
