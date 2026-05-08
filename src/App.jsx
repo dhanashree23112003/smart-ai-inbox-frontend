@@ -40,21 +40,6 @@ const formatDL = (dl) => {
 
 // ── Modals ────────────────────────────────────────────────────────────────────
 
-const TrashConfirmModal = ({ lowCount, onConfirm, onClose }) => (
-  <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ background: "rgba(15,23,42,.5)", backdropFilter: "blur(4px)" }}>
-    <div className="modal-sheet" style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 20, maxWidth: 400, width: "100%", padding: "24px 24px 28px", boxShadow: "0 20px 60px rgba(0,0,0,.2)", position: "relative" }}>
-      <div className="modal-handle" />
-      <button onClick={onClose} style={{ position: "absolute", top: 14, right: 14, width: 36, height: 36, borderRadius: 8, border: "1px solid #e2e8f0", background: "white", cursor: "pointer", fontSize: 16, color: "#94a3b8", display: "flex", alignItems: "center", justifyContent: "center", touchAction: "manipulation" }}>✕</button>
-      <div style={{ width: 48, height: 48, borderRadius: 14, background: "#fef2f2", border: "1px solid #fecaca", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, marginBottom: 14 }}>🗑️</div>
-      <h2 style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 18, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Trash {lowCount} low priority?</h2>
-      <p style={{ fontSize: 14, color: "#64748b", marginBottom: 22, lineHeight: 1.6 }}>These will move to Gmail Trash — recoverable for 30 days.</p>
-      <div style={{ display: "flex", gap: 10 }}>
-        <button onClick={onClose} style={{ flex: 1, padding: "13px 0", borderRadius: 12, border: "1.5px solid #e2e8f0", background: "white", fontSize: 14, fontWeight: 600, color: "#475569", cursor: "pointer", touchAction: "manipulation" }}>Cancel</button>
-        <button onClick={onConfirm} style={{ flex: 1, padding: "13px 0", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "white", fontSize: 14, fontWeight: 700, cursor: "pointer", touchAction: "manipulation" }}>Move to Trash</button>
-      </div>
-    </div>
-  </div>
-);
 
 const DemoModal = ({ onClose }) => (
   <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ background: "rgba(15,23,42,.5)", backdropFilter: "blur(4px)" }}>
@@ -90,9 +75,6 @@ export default function SmartInbox() {
   const [aiOut, setAiOut]                       = useState(MOCK_AI.default);
   const [loading, setLoading]                   = useState(false);
   const [syncing, setSyncing]                   = useState(false);
-  const [trashing, setTrashing]                 = useState(false);
-  const [trashResult, setTrashResult]           = useState(null);
-  const [showTrashConfirm, setShowTrashConfirm] = useState(false);
   const [status, setStatus]                     = useState("DEMO");
   const [filter, setFilter]                     = useState("ALL");
   const [showDemo, setShowDemo]                 = useState(false);
@@ -216,39 +198,6 @@ export default function SmartInbox() {
     finally { setSyncing(false); }
   };
 
-  const handleTrashLowPriority = async () => {
-    setShowTrashConfirm(false); setTrashing(true);
-    const prevEmails = emails;
-    try {
-      const r = await fetch(`${API}/trash-low-priority`, { method: "POST", headers: authHeaders() });
-      if (!r.ok) throw new Error("Server error");
-      const d = await r.json();
-      setTrashResult(d);
-      const remaining = emails.filter(e => e.priority !== "LOW");
-      setEmails(remaining); calcStats(remaining);
-      setTimeout(() => setTrashResult(null), 4000);
-    } catch (e) {
-      console.error(e);
-      setEmails(prevEmails);
-      setTrashResult({ error: "Failed to reach backend." });
-      setTimeout(() => setTrashResult(null), 4000);
-    } finally { setTrashing(false); }
-  };
-
-  const handleTrashSingle = async (email, ev) => {
-    ev.stopPropagation();
-    if (!email.gmail_message_id) return;
-    const prevEmails = emails;
-    try {
-      const r = await fetch(`${API}/trash-email/${email.gmail_message_id}`, { method: "POST", headers: authHeaders() });
-      if (!r.ok) throw new Error("Failed");
-      const remaining = emails.filter(e => e.gmail_message_id !== email.gmail_message_id);
-      setEmails(remaining); calcStats(remaining);
-    } catch (e) {
-      console.error("Failed to trash:", e);
-      setEmails(prevEmails);
-    }
-  };
 
   const handleAsk = async (q) => {
     const question = (q || query).trim();
@@ -273,7 +222,6 @@ export default function SmartInbox() {
   };
 
   const filtered    = filter === "ALL" ? emails : emails.filter(e => e.priority === filter);
-  const lowCount    = emails.filter(e => e.priority === "LOW").length;
   const statusGood  = status.includes("SYNCED");
   const avatarLetters = userEmail ? userEmail.slice(0, 2).toUpperCase() : "DB";
 
@@ -293,11 +241,10 @@ export default function SmartInbox() {
       <style>{CSS}</style>
 
       {showDemo         && <DemoModal         onClose={() => setShowDemo(false)} />}
-      {showTrashConfirm && <TrashConfirmModal lowCount={lowCount} onConfirm={handleTrashLowPriority} onClose={() => setShowTrashConfirm(false)} />}
 
       {/* Feedback toast */}
       {feedbackToast && (
-        <div className="toast" style={{ borderColor: feedbackToast.error ? "#fca5a5" : "#a5f3c6", bottom: trashResult ? 120 : undefined }}>
+        <div className="toast" style={{ borderColor: feedbackToast.error ? "#fca5a5" : "#a5f3c6" }}>
           <span style={{ fontSize: 18 }}>{feedbackToast.error ? "⚠️" : "🧠"}</span>
           <div>
             <p style={{ fontSize: 13, color: "#0f172a", fontWeight: 600 }}>{feedbackToast.error ? feedbackToast.msg : "Model updated!"}</p>
@@ -306,13 +253,6 @@ export default function SmartInbox() {
         </div>
       )}
 
-      {/* Toast */}
-      {trashResult && (
-        <div className="toast" style={{ borderColor: trashResult.error ? "#fca5a5" : "#86efac" }}>
-          <span style={{ fontSize: 18 }}>{trashResult.error ? "⚠️" : "✅"}</span>
-          <span style={{ fontSize: 14, color: "#1e293b" }}>{trashResult.error ? trashResult.error : `Moved ${trashResult.trashed} emails to Trash`}</span>
-        </div>
-      )}
 
       {/* Demo banner */}
       {!loggedIn && (
@@ -447,24 +387,22 @@ export default function SmartInbox() {
         <div className="desktop-grid desktop-only">
           <EmailList
             filtered={filtered} filter={filter} setFilter={setFilter}
-            loggedIn={loggedIn} lowCount={lowCount} trashing={trashing}
-            setShowTrashConfirm={setShowTrashConfirm} selected={selected}
-            setSelected={setSelected} handleTrashSingle={handleTrashSingle}
-            handleFeedback={handleFeedback}
+            loggedIn={loggedIn} selected={selected}
+            setSelected={setSelected} handleFeedback={handleFeedback}
           />
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <AIPanel loggedIn={loggedIn} loading={loading} aiOut={aiOut} query={query} setQuery={setQuery} handleAsk={handleAsk} renderAI={renderAI} handleSignIn={handleSignIn} />
-            <QuickActions loggedIn={loggedIn} syncing={syncing} handleSync={handleSync} setFilter={setFilter} handleAsk={handleAsk} setShowTrashConfirm={setShowTrashConfirm} handleSignIn={handleSignIn} setShowDemo={setShowDemo} handleSignOut={handleSignOut} />
+            <QuickActions loggedIn={loggedIn} syncing={syncing} handleSync={handleSync} setFilter={setFilter} handleAsk={handleAsk} handleSignIn={handleSignIn} setShowDemo={setShowDemo} handleSignOut={handleSignOut} />
           </div>
         </div>
 
         {/* ── Mobile layout ── */}
         <div className="mobile-panel">
-          {mobileTab === "inbox"   && <EmailList filtered={filtered} filter={filter} setFilter={setFilter} loggedIn={loggedIn} lowCount={lowCount} trashing={trashing} setShowTrashConfirm={setShowTrashConfirm} selected={selected} setSelected={setSelected} handleTrashSingle={handleTrashSingle} handleFeedback={handleFeedback} mobile />}
+          {mobileTab === "inbox"   && <EmailList filtered={filtered} filter={filter} setFilter={setFilter} loggedIn={loggedIn} selected={selected} setSelected={setSelected} handleFeedback={handleFeedback} mobile />}
           {mobileTab === "ai"      && <AIPanel loggedIn={loggedIn} loading={loading} aiOut={aiOut} query={query} setQuery={setQuery} handleAsk={handleAsk} renderAI={renderAI} handleSignIn={handleSignIn} mobile />}
           {mobileTab === "actions" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <QuickActions loggedIn={loggedIn} syncing={syncing} handleSync={handleSync} setFilter={setFilter} handleAsk={handleAsk} setShowTrashConfirm={setShowTrashConfirm} handleSignIn={handleSignIn} setShowDemo={setShowDemo} handleSignOut={handleSignOut} mobile setMobileTab={setMobileTab} />
+              <QuickActions loggedIn={loggedIn} syncing={syncing} handleSync={handleSync} setFilter={setFilter} handleAsk={handleAsk} handleSignIn={handleSignIn} setShowDemo={setShowDemo} handleSignOut={handleSignOut} mobile setMobileTab={setMobileTab} />
               {loggedIn ? (
                 <div className="card" style={{ padding: 16 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Account</p>
@@ -506,7 +444,7 @@ export default function SmartInbox() {
 
 // ── Email List ────────────────────────────────────────────────────────────────
 
-function EmailList({ filtered, filter, setFilter, loggedIn, lowCount, trashing, setShowTrashConfirm, selected, setSelected, handleTrashSingle, handleFeedback, mobile }) {
+function EmailList({ filtered, filter, setFilter, loggedIn, selected, setSelected, handleFeedback, mobile }) {
   return (
     <div className="card" style={{ overflow: "hidden" }}>
       {/* Header */}
@@ -517,11 +455,6 @@ function EmailList({ filtered, filter, setFilter, loggedIn, lowCount, trashing, 
             {!loggedIn && <span style={{ fontSize: 10, fontWeight: 700, color: "#c2410c", background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 100, padding: "2px 8px" }}>DEMO</span>}
             <span style={{ fontSize: 12, color: "#94a3b8" }}>{filtered.length} emails</span>
           </div>
-          {loggedIn && lowCount > 0 && (
-            <button onClick={() => setShowTrashConfirm(true)} disabled={trashing} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "#ef4444", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 100, padding: "5px 12px", cursor: "pointer" }}>
-              {trashing ? <SpinIcon size={10} /> : "🗑️"} {trashing ? "Trashing..." : `Trash LOW (${lowCount})`}
-            </button>
-          )}
         </div>
         <div style={{ display: "flex", gap: 6, overflowX: "auto" }} className="scrollbar-hide">
           {[["ALL","All"],["HIGH","🔴 Urgent"],["MEDIUM","🟡 Medium"],["LOW","⚪ Low"]].map(([val, label]) => (
@@ -591,13 +524,6 @@ function EmailList({ filtered, filter, setFilter, loggedIn, lowCount, trashing, 
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, color: "#ef4444", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 100, padding: "2px 8px", marginBottom: loggedIn ? 4 : 0 }}>⏰ {dl}</span>
                   )}
 
-                  {/* Trash button */}
-                  {loggedIn && p !== "HIGH" && (
-                    <button onClick={ev => handleTrashSingle(email, ev)} style={{ display: "block", marginTop: 6, fontSize: 11, fontWeight: 600, color: "#f87171", background: "transparent", border: "1px solid #fecaca", borderRadius: 100, padding: "3px 10px", cursor: "pointer", transition: "all .15s" }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "#fef2f2"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-                    >🗑️ Trash</button>
-                  )}
 
                   {/* Feedback buttons — shown when card is selected */}
                   {isSel && loggedIn && email.gmail_message_id && (
@@ -714,12 +640,12 @@ function AIPanel({ loggedIn, loading, aiOut, query, setQuery, handleAsk, renderA
 
 // ── Quick Actions ─────────────────────────────────────────────────────────────
 
-function QuickActions({ loggedIn, syncing, handleSync, setFilter, handleAsk, setShowTrashConfirm, handleSignIn, setShowDemo, handleSignOut, mobile, setMobileTab }) {
+function QuickActions({ loggedIn, syncing, handleSync, setFilter, handleAsk, handleSignIn, setShowDemo, handleSignOut, mobile, setMobileTab }) {
   const actions = [
-    { icon: loggedIn ? "⚡" : "📬", label: loggedIn ? "Sync Gmail" : "Request Demo", sub: loggedIn ? "Pull latest emails" : "Get live access",        action: loggedIn ? handleSync : () => setShowDemo(true) },
-    { icon: "🔴",                    label: "View Urgent",                             sub: "Filter to HIGH priority",                                    action: () => { setFilter("HIGH"); if (mobile && setMobileTab) setMobileTab("inbox"); } },
-    { icon: "⏰",                    label: "My Deadlines",                            sub: "Ask AI for upcoming due dates",                               action: () => handleAsk("What deadlines do I have?") },
-    { icon: loggedIn ? "🗑️" : "🔑", label: loggedIn ? "Trash LOW emails" : "Sign In", sub: loggedIn ? "One-click inbox cleanup" : "Connect your Gmail", action: loggedIn ? () => setShowTrashConfirm(true) : handleSignIn },
+    { icon: loggedIn ? "⚡" : "📬", label: loggedIn ? "Sync Gmail"    : "Request Demo",  sub: loggedIn ? "Pull latest emails"          : "Get live access",       action: loggedIn ? handleSync : () => setShowDemo(true) },
+    { icon: "🔴",                    label: "View Urgent",                                 sub: "Filter to HIGH priority",                                          action: () => { setFilter("HIGH"); if (mobile && setMobileTab) setMobileTab("inbox"); } },
+    { icon: "⏰",                    label: "My Deadlines",                                sub: "Ask AI for upcoming due dates",                                     action: () => handleAsk("What deadlines do I have?") },
+    { icon: loggedIn ? "📊" : "🔑", label: loggedIn ? "Summarize Inbox" : "Sign In",     sub: loggedIn ? "AI overview of your inbox"   : "Connect your Gmail",    action: loggedIn ? () => handleAsk("Summarize inbox") : handleSignIn },
   ];
   return (
     <div className="card" style={{ padding: 18 }}>
